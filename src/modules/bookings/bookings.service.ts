@@ -1,55 +1,60 @@
-import { prisma } from "../../config/database"
-import { CacheService } from "../../services/cache"
-import { EventsService } from "../events/events.service"
-import { QRService } from "../../services/qrService"
-import { emailService } from "../../services/emailService"
-import { CryptoUtils } from "../../utils/crypto"
-import type { CreateBookingData, BookingWithDetails, BookingFilters, PaginationOptions } from "../../types"
-import { Prisma } from '@prisma/client';
+import { prisma } from "../../config/database";
+import { CacheService } from "../../services/cache";
+import { EventsService } from "../events/events.service";
+import { QRService } from "../../services/qrService";
+import { emailService } from "../../services/emailService";
+import { CryptoUtils } from "../../utils/crypto";
+import type {
+  CreateBookingData,
+  BookingWithDetails,
+  BookingFilters,
+  PaginationOptions,
+} from "../../types";
+import { Prisma } from "@prisma/client";
 
 interface Stat {
   _count: { id: number };
-  _sum: { quantity: number; totalAmount: number };
+  _sum: { quantity: number | null; totalAmount: any };
   status: string;
 }
 export class BookingsService {
-  private static CACHE_PREFIX = "booking:"
-  private static CACHE_TTL = 1800 // 30 minutes
-  private static BOOKING_HOLD_TIME = 900 // 15 minutes to complete booking
+  private static CACHE_PREFIX = "booking:";
+  private static CACHE_TTL = 1800; // 30 minutes
+  private static BOOKING_HOLD_TIME = 900; // 15 minutes to complete booking
 
   /**
    * Start booking process - creates pending booking and holds tickets
    */
   static async startBooking(bookingData: CreateBookingData, userId: string) {
-    const { eventId, quantity } = bookingData
+    const { eventId, quantity } = bookingData;
 
     // Get event details
-    const event = await EventsService.getEventById(eventId)
+    const event = await EventsService.getEventById(eventId);
 
     if (!event) {
-      throw new Error("Event not found")
+      throw new Error("Event not found");
     }
 
-    if (event.status !== "ACTIVE") {
-      throw new Error("Event is not available for booking")
+    if ((event as any).status !== "ACTIVE") {
+      throw new Error("Event is not available for booking");
     }
 
-    if (event.startDate <= new Date()) {
-      throw new Error("Cannot book tickets for past events")
+    if ((event as any).startDate <= new Date()) {
+      throw new Error("Cannot book tickets for past events");
     }
 
-    if (event.available < quantity) {
-      throw new Error(`Only ${event.available} tickets available`)
+    if ((event as any).available < quantity) {
+      throw new Error(`Only ${(event as any).available} tickets available`);
     }
 
     // Calculate total amount
-    const totalAmount = Number(event.price) * quantity
+    const totalAmount = Number((event as any).price) * quantity;
 
     // Generate booking reference
-    const bookingReference = CryptoUtils.generateBookingReference()
+    const bookingReference = CryptoUtils.generateBookingReference();
 
     // Start database transaction
-    const booking = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const booking = await prisma.$transaction(async (tx) => {
       // Create pending booking
       const newBooking = await tx.booking.create({
         data: {
@@ -81,7 +86,7 @@ export class BookingsService {
             },
           },
         },
-      })
+      });
 
       // Update event availability (hold tickets)
       await tx.event.update({
@@ -91,26 +96,27 @@ export class BookingsService {
             decrement: quantity,
           },
         },
-      })
+      });
 
-      return newBooking
-    })
+      return newBooking;
+    });
 
     // Cache booking with expiration
     await CacheService.set(`${this.CACHE_PREFIX}${booking.id}`, booking, {
       ttl: this.BOOKING_HOLD_TIME,
-    })
+    });
 
     // Set booking expiration timer
     await CacheService.set(`booking_hold:${booking.id}`, true, {
       ttl: this.BOOKING_HOLD_TIME,
-    })
+    });
 
     return {
       booking,
       holdExpiresAt: new Date(Date.now() + this.BOOKING_HOLD_TIME * 1000),
-      message: "Booking started successfully. Complete payment within 15 minutes.",
-    }
+      message:
+        "Booking started successfully. Complete payment within 15 minutes.",
+    };
   }
 
   /**
@@ -141,22 +147,22 @@ export class BookingsService {
           },
         },
       },
-    })
+    });
 
     if (!booking) {
-      throw new Error("Booking not found")
+      throw new Error("Booking not found");
     }
 
     if (booking.status !== "PENDING") {
-      throw new Error("Booking is not in pending status")
+      throw new Error("Booking is not in pending status");
     }
 
     // Check if booking hold has expired
-    const holdExists = await CacheService.exists(`booking_hold:${bookingId}`)
+    const holdExists = await CacheService.exists(`booking_hold:${bookingId}`);
     if (!holdExists) {
       // Restore event availability and cancel booking
-      await this.cancelExpiredBooking(bookingId)
-      throw new Error("Booking has expired. Please start a new booking.")
+      await this.cancelExpiredBooking(bookingId);
+      throw new Error("Booking has expired. Please start a new booking.");
     }
 
     // Generate QR code for the ticket
@@ -165,10 +171,10 @@ export class BookingsService {
       eventId: booking.eventId,
       userId: booking.userId,
       bookingReference: booking.bookingReference,
-    }
+    };
 
-    const qrCode = await QRService.generateBookingQR(qrData)
-    const qrCodeBuffer = await QRService.generateBookingQRBuffer(qrData)
+    const qrCode = await QRService.generateBookingQR(qrData);
+    const qrCodeBuffer = await QRService.generateBookingQRBuffer(qrData);
 
     // Update booking status
     const confirmedBooking = await prisma.booking.update({
@@ -199,103 +205,118 @@ export class BookingsService {
           },
         },
       },
-    })
+    });
 
     // Clear booking hold
-    await CacheService.delete(`booking_hold:${bookingId}`)
+    await CacheService.delete(`booking_hold:${bookingId}`);
 
     // Update cache
-    await CacheService.set(`${this.CACHE_PREFIX}${bookingId}`, confirmedBooking, {
-      ttl: this.CACHE_TTL,
-    })
+    await CacheService.set(
+      `${this.CACHE_PREFIX}${bookingId}`,
+      confirmedBooking,
+      {
+        ttl: this.CACHE_TTL,
+      }
+    );
 
     // Send confirmation email with QR code
-   await emailService.sendBookingConfirmation(
-  confirmedBooking.user.email,
-  {
-    bookingReference: confirmedBooking.bookingReference,
-    eventTitle: confirmedBooking.event.title,
-    eventDate: confirmedBooking.event.startDate,
-    eventVenue: confirmedBooking.event.venue,
-    quantity: confirmedBooking.quantity,
-    totalAmount: confirmedBooking.totalAmount,
-  },
-  qrCodeBuffer,
-)
+    await emailService.sendBookingConfirmation(
+      confirmedBooking.user.email,
+      {
+        bookingReference: confirmedBooking.bookingReference,
+        eventTitle: confirmedBooking.event.title,
+        eventDate: confirmedBooking.event.startDate.toISOString(),
+        eventVenue: confirmedBooking.event.venue,
+        quantity: confirmedBooking.quantity,
+        totalAmount: Number(confirmedBooking.totalAmount),
+      },
+      qrCodeBuffer
+    );
 
-    return confirmedBooking
+    return confirmedBooking;
   }
 
   /**
    * Cancel booking
    */
-  static async cancelBooking(bookingId: string, userId: string, reason = "Cancelled by user") {
+  static async cancelBooking(
+    bookingId: string,
+    userId: string,
+    reason = "Cancelled by user"
+  ) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
       include: {
         event: true,
         user: true,
       },
-    })
+    });
 
     if (!booking) {
-      throw new Error("Booking not found")
+      throw new Error("Booking not found");
     }
 
     if (booking.userId !== userId) {
-      throw new Error("Unauthorized to cancel this booking")
+      throw new Error("Unauthorized to cancel this booking");
     }
 
     if (booking.status === "CANCELLED") {
-      throw new Error("Booking is already cancelled")
+      throw new Error("Booking is already cancelled");
     }
 
     if (booking.status === "COMPLETED") {
-      throw new Error("Cannot cancel completed booking")
+      throw new Error("Cannot cancel completed booking");
     }
 
     // Start transaction
-    const cancelledBooking = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Update booking status
-      const updated = await tx.booking.update({
-        where: { id: bookingId },
-        data: {
-          status: "CANCELLED",
-        },
-        include: {
-          event: true,
-          user: true,
-        },
-      })
-
-      // Restore event availability
-      await tx.event.update({
-        where: { id: booking.eventId },
-        data: {
-          available: {
-            increment: booking.quantity,
+    const cancelledBooking = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Update booking status
+        const updated = await tx.booking.update({
+          where: { id: bookingId },
+          data: {
+            status: "CANCELLED",
           },
-        },
-      })
+          include: {
+            event: true,
+            user: true,
+          },
+        });
 
-      return updated
-    })
+        // Restore event availability
+        await tx.event.update({
+          where: { id: booking.eventId },
+          data: {
+            available: {
+              increment: booking.quantity,
+            },
+          },
+        });
+
+        return updated;
+      }
+    );
 
     // Clear cache
-    await CacheService.delete(`${this.CACHE_PREFIX}${bookingId}`)
-    await CacheService.delete(`booking_hold:${bookingId}`)
+    await CacheService.delete(`${this.CACHE_PREFIX}${bookingId}`);
+    await CacheService.delete(`booking_hold:${bookingId}`);
 
-    return cancelledBooking
+    return cancelledBooking;
   }
 
   /**
    * Get booking by ID
    */
-  static async getBookingById(bookingId: string, userId?: string): Promise<BookingWithDetails> {
+  static async getBookingById(
+    bookingId: string,
+    userId?: string
+  ): Promise<BookingWithDetails> {
     // Try cache first
-    const cachedBooking = await CacheService.get(`${this.CACHE_PREFIX}${bookingId}`)
+    const cachedBooking = await CacheService.get<BookingWithDetails>(
+      `${this.CACHE_PREFIX}${bookingId}`
+    );
     if (cachedBooking) {
-      return cachedBooking
+      return cachedBooking;
     }
 
     const booking = await prisma.booking.findUnique({
@@ -321,29 +342,38 @@ export class BookingsService {
           },
         },
       },
-    })
+    });
 
     if (!booking) {
-      throw new Error("Booking not found")
+      throw new Error("Booking not found");
     }
 
     // Check authorization if userId is provided
     if (userId && booking.userId !== userId) {
-      throw new Error("Unauthorized to view this booking")
+      throw new Error("Unauthorized to view this booking");
     }
 
     // Cache the booking
     await CacheService.set(`${this.CACHE_PREFIX}${bookingId}`, booking, {
       ttl: this.CACHE_TTL,
-    })
+    });
 
-    return booking as BookingWithDetails
+    return {
+      ...booking,
+      totalAmount: Number(booking.totalAmount),
+      event: {
+        ...booking.event,
+        price: Number(booking.event.price),
+      },
+    } as BookingWithDetails;
   }
 
   /**
    * Get booking by reference
    */
-  static async getBookingByReference(bookingReference: string): Promise<BookingWithDetails> {
+  static async getBookingByReference(
+    bookingReference: string
+  ): Promise<BookingWithDetails> {
     const booking = await prisma.booking.findUnique({
       where: { bookingReference },
       include: {
@@ -367,40 +397,56 @@ export class BookingsService {
           },
         },
       },
-    })
+    });
 
     if (!booking) {
-      throw new Error("Booking not found")
+      throw new Error("Booking not found");
     }
 
-    return booking as BookingWithDetails
+    return {
+      ...booking,
+      totalAmount: Number(booking.totalAmount),
+      event: {
+        ...booking.event,
+        price: Number(booking.event.price),
+      },
+    } as BookingWithDetails;
   }
 
   /**
    * Get user bookings
    */
-  static async getUserBookings(userId: string, filters: BookingFilters = {}, pagination: PaginationOptions = {}) {
-    const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = pagination
-    const skip = (page - 1) * limit
+  static async getUserBookings(
+    userId: string,
+    filters: BookingFilters = {},
+    pagination: PaginationOptions = {}
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
+    const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = { userId }
+    const where: any = { userId };
 
     if (filters.status) {
-      where.status = filters.status
+      where.status = filters.status;
     }
 
     if (filters.eventId) {
-      where.eventId = filters.eventId
+      where.eventId = filters.eventId;
     }
 
     if (filters.startDate || filters.endDate) {
-      where.createdAt = {}
+      where.createdAt = {};
       if (filters.startDate) {
-        where.createdAt.gte = filters.startDate
+        where.createdAt.gte = filters.startDate;
       }
       if (filters.endDate) {
-        where.createdAt.lte = filters.endDate
+        where.createdAt.lte = filters.endDate;
       }
     }
 
@@ -427,36 +473,44 @@ export class BookingsService {
         },
       }),
       prisma.booking.count({ where }),
-    ])
+    ]);
 
-    return { bookings, total }
+    return { bookings, total };
   }
 
   /**
    * Get all bookings (admin only)
    */
-  static async getAllBookings(filters: BookingFilters = {}, pagination: PaginationOptions = {}) {
-    const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = pagination
-    const skip = (page - 1) * limit
+  static async getAllBookings(
+    filters: BookingFilters = {},
+    pagination: PaginationOptions = {}
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
+    const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {}
+    const where: any = {};
 
     if (filters.status) {
-      where.status = filters.status
+      where.status = filters.status;
     }
 
     if (filters.eventId) {
-      where.eventId = filters.eventId
+      where.eventId = filters.eventId;
     }
 
     if (filters.startDate || filters.endDate) {
-      where.createdAt = {}
+      where.createdAt = {};
       if (filters.startDate) {
-        where.createdAt.gte = filters.startDate
+        where.createdAt.gte = filters.startDate;
       }
       if (filters.endDate) {
-        where.createdAt.lte = filters.endDate
+        where.createdAt.lte = filters.endDate;
       }
     }
 
@@ -491,25 +545,25 @@ export class BookingsService {
         },
       }),
       prisma.booking.count({ where }),
-    ])
+    ]);
 
-    return { bookings, total }
+    return { bookings, total };
   }
 
   /**
    * Verify ticket QR code
    */
   static async verifyTicket(bookingReference: string) {
-    const booking = await this.getBookingByReference(bookingReference)
+    const booking = await this.getBookingByReference(bookingReference);
 
     if (booking.status !== "CONFIRMED") {
-      throw new Error("Invalid ticket - booking not confirmed")
+      throw new Error("Invalid ticket - booking not confirmed");
     }
 
     // Check if event has started
-    const now = new Date()
-    const eventStart = new Date(booking.event.startDate)
-    const eventEnd = new Date(booking.event.endDate)
+    const now = new Date();
+    const eventStart = new Date(booking.event.startDate);
+    const eventEnd = new Date(booking.event.endDate);
 
     if (now < eventStart) {
       return {
@@ -517,7 +571,7 @@ export class BookingsService {
         status: "EARLY",
         message: "Ticket is valid but event hasn't started yet",
         booking,
-      }
+      };
     }
 
     if (now > eventEnd) {
@@ -526,7 +580,7 @@ export class BookingsService {
         status: "EXPIRED",
         message: "Event has ended",
         booking,
-      }
+      };
     }
 
     // Mark as completed if not already
@@ -534,7 +588,7 @@ export class BookingsService {
       await prisma.booking.update({
         where: { id: booking.id },
         data: { status: "COMPLETED" },
-      })
+      });
     }
 
     return {
@@ -542,7 +596,7 @@ export class BookingsService {
       status: "VALID",
       message: "Ticket verified successfully",
       booking,
-    }
+    };
   }
 
   /**
@@ -551,10 +605,10 @@ export class BookingsService {
   static async cancelExpiredBooking(bookingId: string) {
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
-    })
+    });
 
     if (!booking || booking.status !== "PENDING") {
-      return
+      return;
     }
 
     // Start transaction
@@ -563,7 +617,7 @@ export class BookingsService {
       await tx.booking.update({
         where: { id: bookingId },
         data: { status: "CANCELLED" },
-      })
+      });
 
       // Restore event availability
       await tx.event.update({
@@ -573,19 +627,19 @@ export class BookingsService {
             increment: booking.quantity,
           },
         },
-      })
-    })
+      });
+    });
 
     // Clear cache
-    await CacheService.delete(`${this.CACHE_PREFIX}${bookingId}`)
-    await CacheService.delete(`booking_hold:${bookingId}`)
+    await CacheService.delete(`${this.CACHE_PREFIX}${bookingId}`);
+    await CacheService.delete(`booking_hold:${bookingId}`);
   }
 
   /**
    * Get booking statistics
    */
   static async getBookingStatistics(userId?: string) {
-    const where = userId ? { userId } : {}
+    const where = userId ? { userId } : {};
 
     const stats = await prisma.booking.groupBy({
       by: ["status"],
@@ -597,27 +651,30 @@ export class BookingsService {
         quantity: true,
         totalAmount: true,
       },
-    })
+    });
 
-    const totalBookings = stats.reduce((sum: number, stat:Stat) => sum + stat._count.id, 0)
-    const totalTickets = stats.reduce((sum: number, stat:Stat) => sum + (stat._sum.quantity || 0), 0)
-    const totalAmount = stats.reduce((sum: number, stat:Stat) => sum + Number(stat._sum.totalAmount || 0), 0)
+    const totalBookings = stats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalTickets = stats.reduce(
+      (sum, stat) => sum + (stat._sum.quantity || 0),
+      0
+    );
+    const totalAmount = stats.reduce(
+      (sum, stat) => sum + Number(stat._sum.totalAmount || 0),
+      0
+    );
 
     return {
       totalBookings,
       totalTickets,
       totalAmount,
-      byStatus: stats.reduce(
-        (acc:Record<string, any>, stat:Stat) => {
-          acc[stat.status.toLowerCase()] = {
-            count: stat._count.id,
-            tickets: stat._sum.quantity || 0,
-            amount: Number(stat._sum.totalAmount || 0),
-          }
-          return acc
-        },
-        {} as Record<string, any>,
-      ),
-    }
+      byStatus: stats.reduce((acc, stat) => {
+        acc[stat.status.toLowerCase()] = {
+          count: stat._count.id,
+          tickets: stat._sum.quantity || 0,
+          amount: Number(stat._sum.totalAmount || 0),
+        };
+        return acc;
+      }, {} as Record<string, any>),
+    };
   }
 }

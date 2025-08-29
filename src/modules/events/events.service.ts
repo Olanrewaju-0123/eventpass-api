@@ -1,17 +1,21 @@
-import { prisma } from "../../config/database"
-import { CacheService } from "../../services/cache"
-import { QRService } from "../../services/qrService"
-import type { CreateEventData, UpdateEventData, EventFilters, PaginationOptions } from "../../types"
-
+import { prisma } from "../../config/database";
+import { CacheService } from "../../services/cache";
+import { QRService } from "../../services/qrService";
+import type {
+  CreateEventData,
+  UpdateEventData,
+  EventFilters,
+  PaginationOptions,
+} from "../../types";
 
 interface Stat {
-  _count: { id: number }
-  _sum: { quantity: number, totalAmount: number }
-  status: string
+  _count: { id: number };
+  _sum: { quantity: number | null; totalAmount: any };
+  status: string;
 }
 export class EventsService {
-  private static CACHE_PREFIX = "event:"
-  private static CACHE_TTL = 1800 // 30 minutes
+  private static CACHE_PREFIX = "event:";
+  private static CACHE_TTL = 1800; // 30 minutes
 
   /**
    * Create new event
@@ -33,15 +37,17 @@ export class EventsService {
           },
         },
       },
-    })
+    });
 
     // Cache the event
-    await CacheService.set(`${this.CACHE_PREFIX}${event.id}`, event, { ttl: this.CACHE_TTL })
+    await CacheService.set(`${this.CACHE_PREFIX}${event.id}`, event, {
+      ttl: this.CACHE_TTL,
+    });
 
     // Clear events list cache
-    await this.clearEventsListCache()
+    await this.clearEventsListCache();
 
-    return event
+    return event;
   }
 
   /**
@@ -49,9 +55,11 @@ export class EventsService {
    */
   static async getEventById(eventId: string) {
     // Try cache first
-    const cachedEvent = await CacheService.get(`${this.CACHE_PREFIX}${eventId}`)
+    const cachedEvent = await CacheService.get(
+      `${this.CACHE_PREFIX}${eventId}`
+    );
     if (cachedEvent) {
-      return cachedEvent
+      return cachedEvent;
     }
 
     const event = await prisma.event.findUnique({
@@ -75,70 +83,89 @@ export class EventsService {
           },
         },
       },
-    })
+    });
 
     if (!event) {
-      throw new Error("Event not found")
+      throw new Error("Event not found");
     }
 
     // Cache the event
-    await CacheService.set(`${this.CACHE_PREFIX}${event.id}`, event, { ttl: this.CACHE_TTL })
+    await CacheService.set(`${this.CACHE_PREFIX}${event.id}`, event, {
+      ttl: this.CACHE_TTL,
+    });
 
-    return event
+    return event;
   }
 
   /**
    * Get all events with filters and pagination
    */
-  static async getEvents(filters: EventFilters = {}, pagination: PaginationOptions = {}) {
-    const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = pagination
-    const skip = (page - 1) * limit
+  static async getEvents(
+    filters: EventFilters = {},
+    pagination: PaginationOptions = {}
+  ): Promise<{ events: any[]; total: number }> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
+    const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {}
+    const where: any = {};
 
     if (filters.category) {
-      where.category = filters.category
+      where.category = filters.category;
     }
 
     if (filters.status) {
-      where.status = filters.status
+      where.status = filters.status;
     } else {
-      where.status = "ACTIVE" // Default to active events
+      where.status = "ACTIVE"; // Default to active events
     }
 
     if (filters.venue) {
       where.venue = {
         contains: filters.venue,
         mode: "insensitive",
-      }
+      };
     }
 
     if (filters.startDate || filters.endDate) {
-      where.startDate = {}
+      where.startDate = {};
       if (filters.startDate) {
-        where.startDate.gte = filters.startDate
+        where.startDate.gte = filters.startDate;
       }
       if (filters.endDate) {
-        where.startDate.lte = filters.endDate
+        where.startDate.lte = filters.endDate;
       }
     }
 
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      where.price = {}
+      where.price = {};
       if (filters.minPrice !== undefined) {
-        where.price.gte = filters.minPrice
+        where.price.gte = filters.minPrice;
       }
       if (filters.maxPrice !== undefined) {
-        where.price.lte = filters.maxPrice
+        where.price.lte = filters.maxPrice;
       }
     }
 
     // Try cache for this specific query
-    const cacheKey = `events_list:${JSON.stringify({ where, skip, limit, sortBy, sortOrder })}`
-    const cachedResult = await CacheService.get(cacheKey)
+    const cacheKey = `events_list:${JSON.stringify({
+      where,
+      skip,
+      limit,
+      sortBy,
+      sortOrder,
+    })}`;
+    const cachedResult = await CacheService.get<{
+      events: any[];
+      total: number;
+    }>(cacheKey);
     if (cachedResult) {
-      return cachedResult
+      return cachedResult;
     }
 
     const [events, total] = await Promise.all([
@@ -170,40 +197,44 @@ export class EventsService {
         },
       }),
       prisma.event.count({ where }),
-    ])
+    ]);
 
-    const result = { events, total }
+    const result = { events, total };
 
     // Cache the result
-    await CacheService.set(cacheKey, result, { ttl: this.CACHE_TTL })
+    await CacheService.set(cacheKey, result, { ttl: this.CACHE_TTL });
 
-    return result
+    return result;
   }
 
   /**
    * Update event
    */
-  static async updateEvent(eventId: string, updateData: UpdateEventData, userId: string) {
+  static async updateEvent(
+    eventId: string,
+    updateData: UpdateEventData,
+    userId: string
+  ) {
     // Check if event exists and user has permission
     const existingEvent = await prisma.event.findUnique({
       where: { id: eventId },
-    })
+    });
 
     if (!existingEvent) {
-      throw new Error("Event not found")
+      throw new Error("Event not found");
     }
 
     // Check if user is the creator or admin
     const user = await prisma.user.findUnique({
       where: { id: userId },
-    })
+    });
 
     if (!user) {
-      throw new Error("User not found")
+      throw new Error("User not found");
     }
 
     if (existingEvent.createdById !== userId && user.role !== "ADMIN") {
-      throw new Error("Unauthorized to update this event")
+      throw new Error("Unauthorized to update this event");
     }
 
     const updatedEvent = await prisma.event.update({
@@ -219,15 +250,17 @@ export class EventsService {
           },
         },
       },
-    })
+    });
 
     // Update cache
-    await CacheService.set(`${this.CACHE_PREFIX}${eventId}`, updatedEvent, { ttl: this.CACHE_TTL })
+    await CacheService.set(`${this.CACHE_PREFIX}${eventId}`, updatedEvent, {
+      ttl: this.CACHE_TTL,
+    });
 
     // Clear events list cache
-    await this.clearEventsListCache()
+    await this.clearEventsListCache();
 
-    return updatedEvent
+    return updatedEvent;
   }
 
   /**
@@ -240,51 +273,61 @@ export class EventsService {
       include: {
         bookings: true,
       },
-    })
+    });
 
     if (!existingEvent) {
-      throw new Error("Event not found")
+      throw new Error("Event not found");
     }
 
     // Check if user is the creator or admin
     const user = await prisma.user.findUnique({
       where: { id: userId },
-    })
+    });
 
     if (!user) {
-      throw new Error("User not found")
+      throw new Error("User not found");
     }
 
     if (existingEvent.createdById !== userId && user.role !== "ADMIN") {
-      throw new Error("Unauthorized to delete this event")
+      throw new Error("Unauthorized to delete this event");
     }
 
     // Check if there are confirmed bookings
-    const confirmedBookings = existingEvent.bookings.filter((booking:any) => booking.status === "CONFIRMED")
+    const confirmedBookings = existingEvent.bookings.filter(
+      (booking: any) => booking.status === "CONFIRMED"
+    );
     if (confirmedBookings.length > 0) {
-      throw new Error("Cannot delete event with confirmed bookings")
+      throw new Error("Cannot delete event with confirmed bookings");
     }
 
     // Delete the event
     await prisma.event.delete({
       where: { id: eventId },
-    })
+    });
 
     // Remove from cache
-    await CacheService.delete(`${this.CACHE_PREFIX}${eventId}`)
+    await CacheService.delete(`${this.CACHE_PREFIX}${eventId}`);
 
     // Clear events list cache
-    await this.clearEventsListCache()
+    await this.clearEventsListCache();
 
-    return true
+    return true;
   }
 
   /**
    * Get events by creator
    */
-  static async getEventsByCreator(creatorId: string, pagination: PaginationOptions = {}) {
-    const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = pagination
-    const skip = (page - 1) * limit
+  static async getEventsByCreator(
+    creatorId: string,
+    pagination: PaginationOptions = {}
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = pagination;
+    const skip = (page - 1) * limit;
 
     const [events, total] = await Promise.all([
       prisma.event.findMany({
@@ -309,25 +352,28 @@ export class EventsService {
       prisma.event.count({
         where: { createdById: creatorId },
       }),
-    ])
+    ]);
 
-    return { events, total }
+    return { events, total };
   }
 
   /**
    * Update event availability
    */
-  static async updateEventAvailability(eventId: string, quantityBooked: number) {
+  static async updateEventAvailability(
+    eventId: string,
+    quantityBooked: number
+  ) {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-    })
+    });
 
     if (!event) {
-      throw new Error("Event not found")
+      throw new Error("Event not found");
     }
 
     if (event.available < quantityBooked) {
-      throw new Error("Not enough tickets available")
+      throw new Error("Not enough tickets available");
     }
 
     const updatedEvent = await prisma.event.update({
@@ -335,60 +381,70 @@ export class EventsService {
       data: {
         available: event.available - quantityBooked,
       },
-    })
+    });
 
     // Update cache
-    await CacheService.set(`${this.CACHE_PREFIX}${eventId}`, updatedEvent, { ttl: this.CACHE_TTL })
+    await CacheService.set(`${this.CACHE_PREFIX}${eventId}`, updatedEvent, {
+      ttl: this.CACHE_TTL,
+    });
 
-    return updatedEvent
+    return updatedEvent;
   }
 
   /**
    * Restore event availability (for cancelled bookings)
    */
-  static async restoreEventAvailability(eventId: string, quantityToRestore: number) {
+  static async restoreEventAvailability(
+    eventId: string,
+    quantityToRestore: number
+  ) {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-    })
+    });
 
     if (!event) {
-      throw new Error("Event not found")
+      throw new Error("Event not found");
     }
 
     const updatedEvent = await prisma.event.update({
       where: { id: eventId },
       data: {
-        available: Math.min(event.available + quantityToRestore, event.capacity),
+        available: Math.min(
+          event.available + quantityToRestore,
+          event.capacity
+        ),
       },
-    })
+    });
 
     // Update cache
-    await CacheService.set(`${this.CACHE_PREFIX}${eventId}`, updatedEvent, { ttl: this.CACHE_TTL })
+    await CacheService.set(`${this.CACHE_PREFIX}${eventId}`, updatedEvent, {
+      ttl: this.CACHE_TTL,
+    });
 
-    return updatedEvent
+    return updatedEvent;
   }
 
   /**
    * Generate event promotion QR code
    */
   static async generateEventPromotionQR(eventId: string) {
-    const event = await this.getEventById(eventId)
-    const qrCode = await QRService.generateEventPromotionQR(eventId)
+    const event = await this.getEventById(eventId);
+    const qrCode = await QRService.generateEventPromotionQR(eventId);
 
     return {
       event,
       qrCode,
-    }
+    };
   }
 
   /**
    * Get event categories
    */
   static async getEventCategories() {
-    const cacheKey = "event_categories"
-    const cachedCategories = await CacheService.get(cacheKey)
+    const cacheKey = "event_categories";
+    const cachedCategories = await CacheService.get(cacheKey);
     if (cachedCategories) {
-      return cachedCategories
+      return cachedCategories;
     }
 
     const categories = await prisma.event.findMany({
@@ -399,21 +455,23 @@ export class EventsService {
       where: {
         status: "ACTIVE",
       },
-    })
+    });
 
-    const categoryList = categories.map((c:{ category: string }) => c.category).filter(Boolean)
+    const categoryList = categories
+      .map((c: { category: string }) => c.category)
+      .filter(Boolean);
 
     // Cache for 1 hour
-    await CacheService.set(cacheKey, categoryList, { ttl: 3600 })
+    await CacheService.set(cacheKey, categoryList, { ttl: 3600 });
 
-    return categoryList
+    return categoryList;
   }
 
   /**
    * Get event statistics
    */
   static async getEventStatistics(eventId: string) {
-    const event = await this.getEventById(eventId)
+    const event = (await this.getEventById(eventId)) as any;
 
     const stats = await prisma.booking.groupBy({
       by: ["status"],
@@ -427,15 +485,21 @@ export class EventsService {
         quantity: true,
         totalAmount: true,
       },
-    })
+    });
 
-    const totalBookings = stats.reduce((sum: number, stat: Stat) => sum + stat._count.id, 0)
-    const totalTicketsSold = stats.reduce((sum: number, stat: Stat) => sum + (stat._sum.quantity || 0), 0)
-    const totalRevenue = stats.reduce((sum: number, stat: Stat) => sum + Number(stat._sum.totalAmount || 0), 0)
+    const totalBookings = stats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalTicketsSold = stats.reduce(
+      (sum, stat) => sum + (stat._sum.quantity || 0),
+      0
+    );
+    const totalRevenue = stats.reduce(
+      (sum, stat) => sum + Number(stat._sum.totalAmount || 0),
+      0
+    );
 
-    const confirmedBookings = stats.find((s: Stat) => s.status === "CONFIRMED")
-    const pendingBookings = stats.find((s: Stat) => s.status === "PENDING")
-    const cancelledBookings = stats.find((s: Stat) => s.status === "CANCELLED")
+    const confirmedBookings = stats.find((s) => s.status === "CONFIRMED");
+    const pendingBookings = stats.find((s) => s.status === "PENDING");
+    const cancelledBookings = stats.find((s) => s.status === "CANCELLED");
 
     return {
       event: {
@@ -455,23 +519,26 @@ export class EventsService {
         sold: totalTicketsSold,
         available: event.available,
         capacity: event.capacity,
-        soldPercentage: ((totalTicketsSold / event.capacity) * 100).toFixed(2),
+        soldPercentage: (
+          (Number(totalTicketsSold) / Number(event.capacity)) *
+          100
+        ).toFixed(2),
       },
       revenue: {
         total: totalRevenue,
         confirmed: Number(confirmedBookings?._sum.totalAmount || 0),
         pending: Number(pendingBookings?._sum.totalAmount || 0),
       },
-    }
+    };
   }
 
   /**
    * Clear events list cache
    */
   private static async clearEventsListCache() {
-    const keys = await CacheService.getKeys("events_list:*")
+    const keys = await CacheService.getKeys("events_list:*");
     if (keys.length > 0) {
-      await CacheService.deleteMany(keys)
+      await CacheService.deleteMany(keys);
     }
   }
 }

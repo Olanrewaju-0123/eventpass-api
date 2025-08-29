@@ -31,7 +31,12 @@ class EmailService {
       `,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error("sendWelcomeEmail failed:", error);
+      // swallow in dev to avoid breaking core flows
+    }
   }
 
   async sendBookingConfirmation(
@@ -87,7 +92,11 @@ class EmailService {
       attachments,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error("sendBookingConfirmation failed:", error);
+    }
   }
 
   async sendPaymentConfirmation(
@@ -123,7 +132,11 @@ class EmailService {
       `,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error("sendPaymentConfirmation failed:", error);
+    }
   }
 
   async sendPasswordResetEmail(
@@ -150,7 +163,42 @@ class EmailService {
       `,
     };
 
-    await this.transporter.sendMail(mailOptions);
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error("sendPasswordResetEmail failed:", error);
+    }
+  }
+
+  async sendEmailVerification(
+    to: string,
+    verificationToken: string,
+    firstName: string
+  ): Promise<void> {
+    const verificationUrl = `${config.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+
+    const mailOptions = {
+      from: `${config.FROM_NAME} <${config.FROM_EMAIL}>`,
+      to,
+      subject: "Verify Your Email - EventPass",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Welcome to EventPass!</h2>
+          <p>Hi ${firstName},</p>
+          <p>Thank you for registering with EventPass. Please verify your email address by clicking the button below:</p>
+          <p><a href="${verificationUrl}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you didn't create an account, please ignore this email.</p>
+          <p>Best regards,<br>The EventPass Team</p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error("sendEmailVerification failed:", error);
+    }
   }
   /**
    * Generic method to send custom emails

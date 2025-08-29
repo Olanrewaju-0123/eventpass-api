@@ -59,8 +59,15 @@ app.use(rateLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Debug middleware to log all requests (moved to top)
+app.use((req, res, next) => {
+  console.log(`Request: ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get(`/api/${API_VERSION}/health`, (req, res) => {
+  console.log("Health check endpoint hit!");
   res.status(200).json({
     status: "OK",
     timestamp: new Date().toISOString(),
@@ -70,6 +77,7 @@ app.get("/health", (req, res) => {
 });
 
 // API routes
+
 app.use(`/api/${API_VERSION}/auth`, authRoutes);
 app.use(`/api/${API_VERSION}/events`, eventRoutes);
 app.use(`/api/${API_VERSION}/bookings`, bookingRoutes);
@@ -83,6 +91,7 @@ app.use(`/api/${API_VERSION}/payment-confirmation`, paymentConfirmationRoutes);
 
 // 404 handler (use no path to match all in Express 5)
 app.use((req, res) => {
+  console.log(`404 Not Found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: "Route not found",
@@ -99,7 +108,9 @@ app.listen(PORT, () => {
   console.log(
     `📚 API Documentation: http://localhost:${PORT}/api/${API_VERSION}`
   );
-  console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+  console.log(
+    `🏥 Health Check: http://localhost:${PORT}/api/${API_VERSION}/health`
+  );
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 });
 

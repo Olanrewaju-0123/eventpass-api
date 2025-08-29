@@ -1,13 +1,16 @@
-import axios from "axios"
-import { prisma } from "../../config/database"
-import { config } from "../../config/env"
-import { CryptoUtils } from "../../utils/crypto"
-import { BookingsService } from "../bookings/bookings.service"
-import { EmailService } from "../../services/emailService"
-import type { PaystackInitializeData, PaystackVerifyResponse } from "../../types"
+import axios from "axios";
+import { prisma } from "../../config/database";
+import { config } from "../../config/env";
+import { CryptoUtils } from "../../utils/crypto";
+import { BookingsService } from "../bookings/bookings.service";
+import { emailService } from "../../services/emailService";
+import type {
+  PaystackInitializeData,
+  PaystackVerifyResponse,
+} from "../../types";
 
 export class PaymentsService {
-  private static PAYSTACK_BASE_URL = "https://api.paystack.co"
+  private static PAYSTACK_BASE_URL = "https://api.paystack.co";
 
   /**
    * Initialize payment with Paystack
@@ -20,18 +23,18 @@ export class PaymentsService {
         user: true,
         event: true,
       },
-    })
+    });
 
     if (!booking) {
-      throw new Error("Booking not found")
+      throw new Error("Booking not found");
     }
 
     if (booking.status !== "PENDING") {
-      throw new Error("Booking is not in pending status")
+      throw new Error("Booking is not in pending status");
     }
 
     // Generate payment reference
-    const paymentReference = CryptoUtils.generatePaymentReference()
+    const paymentReference = CryptoUtils.generatePaymentReference();
 
     // Prepare Paystack initialization data
     const initData: PaystackInitializeData = {
@@ -47,19 +50,25 @@ export class PaymentsService {
         eventTitle: booking.event.title,
         quantity: booking.quantity,
       },
-    }
+    };
 
     try {
       // Initialize payment with Paystack
-      const response = await axios.post(`${this.PAYSTACK_BASE_URL}/transaction/initialize`, initData, {
-        headers: {
-          Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      })
+      const response = await axios.post(
+        `${this.PAYSTACK_BASE_URL}/transaction/initialize`,
+        initData,
+        {
+          headers: {
+            Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.data.status) {
-        throw new Error(response.data.message || "Payment initialization failed")
+        throw new Error(
+          response.data.message || "Payment initialization failed"
+        );
       }
 
       // Create payment record
@@ -73,17 +82,20 @@ export class PaymentsService {
           paystackReference: response.data.data.reference,
           status: "PENDING",
         },
-      })
+      });
 
       return {
         payment,
         authorizationUrl: response.data.data.authorization_url,
         accessCode: response.data.data.access_code,
         reference: paymentReference,
-      }
+      };
     } catch (error: any) {
-      console.error("Paystack initialization error:", error.response?.data || error.message)
-      throw new Error("Failed to initialize payment")
+      console.error(
+        "Paystack initialization error:",
+        error.response?.data || error.message
+      );
+      throw new Error("Failed to initialize payment");
     }
   }
 
@@ -92,17 +104,20 @@ export class PaymentsService {
    */
   static async verifyPayment(paymentReference: string) {
     try {
-      const response = await axios.get(`${this.PAYSTACK_BASE_URL}/transaction/verify/${paymentReference}`, {
-        headers: {
-          Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
-        },
-      })
+      const response = await axios.get(
+        `${this.PAYSTACK_BASE_URL}/transaction/verify/${paymentReference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
+          },
+        }
+      );
 
       if (!response.data.status) {
-        throw new Error(response.data.message || "Payment verification failed")
+        throw new Error(response.data.message || "Payment verification failed");
       }
 
-      const paymentData: PaystackVerifyResponse = response.data
+      const paymentData: PaystackVerifyResponse = response.data;
 
       // Get payment record
       const payment = await prisma.payment.findUnique({
@@ -115,10 +130,10 @@ export class PaymentsService {
             },
           },
         },
-      })
+      });
 
       if (!payment) {
-        throw new Error("Payment record not found")
+        throw new Error("Payment record not found");
       }
 
       // Check if payment was successful
@@ -139,28 +154,31 @@ export class PaymentsService {
               },
             },
           },
-        })
+        });
 
         // Complete the booking
-        const completedBooking = await BookingsService.completeBooking(payment.bookingId, paymentReference)
+        const completedBooking = await BookingsService.completeBooking(
+          payment.bookingId,
+          paymentReference
+        );
 
         // Send payment confirmation email
-        await EmailService.sendPaymentConfirmation(
+        await emailService.sendPaymentConfirmation(
           updatedPayment.booking.user.email,
-          updatedPayment.booking.user.firstName,
           {
+            paymentReference,
             amount: Number(updatedPayment.amount),
-            reference: paymentReference,
-            method: "Paystack",
-          },
-        )
+            bookingReference: updatedPayment.booking.bookingReference,
+            eventTitle: updatedPayment.booking.event.title,
+          }
+        );
 
         return {
           payment: updatedPayment,
           booking: completedBooking,
           status: "success",
           message: "Payment verified and booking completed successfully",
-        }
+        };
       } else {
         // Update payment status to failed
         await prisma.payment.update({
@@ -168,17 +186,20 @@ export class PaymentsService {
           data: {
             status: "FAILED",
           },
-        })
+        });
 
         return {
           payment,
           status: "failed",
           message: "Payment verification failed",
-        }
+        };
       }
     } catch (error: any) {
-      console.error("Payment verification error:", error.response?.data || error.message)
-      throw new Error("Failed to verify payment")
+      console.error(
+        "Payment verification error:",
+        error.response?.data || error.message
+      );
+      throw new Error("Failed to verify payment");
     }
   }
 
@@ -186,24 +207,24 @@ export class PaymentsService {
    * Handle Paystack webhook
    */
   static async handleWebhook(event: any) {
-    const { event: eventType, data } = event
+    const { event: eventType, data } = event;
 
     try {
       switch (eventType) {
         case "charge.success":
-          await this.handleSuccessfulCharge(data)
-          break
+          await this.handleSuccessfulCharge(data);
+          break;
 
         case "charge.failed":
-          await this.handleFailedCharge(data)
-          break
+          await this.handleFailedCharge(data);
+          break;
 
         default:
-          console.log(`Unhandled webhook event: ${eventType}`)
+          console.log(`Unhandled webhook event: ${eventType}`);
       }
     } catch (error) {
-      console.error("Webhook handling error:", error)
-      throw error
+      console.error("Webhook handling error:", error);
+      throw error;
     }
   }
 
@@ -211,7 +232,7 @@ export class PaymentsService {
    * Handle successful charge webhook
    */
   private static async handleSuccessfulCharge(data: any) {
-    const paymentReference = data.reference
+    const paymentReference = data.reference;
 
     // Find payment record
     const payment = await prisma.payment.findUnique({
@@ -224,16 +245,16 @@ export class PaymentsService {
           },
         },
       },
-    })
+    });
 
     if (!payment) {
-      console.error(`Payment not found for reference: ${paymentReference}`)
-      return
+      console.error(`Payment not found for reference: ${paymentReference}`);
+      return;
     }
 
     if (payment.status === "SUCCESSFUL") {
-      console.log(`Payment already processed: ${paymentReference}`)
-      return
+      console.log(`Payment already processed: ${paymentReference}`);
+      return;
     }
 
     // Update payment status
@@ -244,30 +265,33 @@ export class PaymentsService {
         paidAt: new Date(data.paid_at),
         paystackReference: data.reference,
       },
-    })
+    });
 
     // Complete booking if not already completed
     if (payment.booking.status === "PENDING") {
-      await BookingsService.completeBooking(payment.bookingId, paymentReference)
+      await BookingsService.completeBooking(
+        payment.bookingId,
+        paymentReference
+      );
     }
 
-    console.log(`Payment processed successfully: ${paymentReference}`)
+    console.log(`Payment processed successfully: ${paymentReference}`);
   }
 
   /**
    * Handle failed charge webhook
    */
   private static async handleFailedCharge(data: any) {
-    const paymentReference = data.reference
+    const paymentReference = data.reference;
 
     // Find payment record
     const payment = await prisma.payment.findUnique({
       where: { paymentReference },
-    })
+    });
 
     if (!payment) {
-      console.error(`Payment not found for reference: ${paymentReference}`)
-      return
+      console.error(`Payment not found for reference: ${paymentReference}`);
+      return;
     }
 
     // Update payment status
@@ -276,9 +300,9 @@ export class PaymentsService {
       data: {
         status: "FAILED",
       },
-    })
+    });
 
-    console.log(`Payment failed: ${paymentReference}`)
+    console.log(`Payment failed: ${paymentReference}`);
   }
 
   /**
@@ -310,20 +334,20 @@ export class PaymentsService {
           },
         },
       },
-    })
+    });
 
     if (!payment) {
-      throw new Error("Payment not found")
+      throw new Error("Payment not found");
     }
 
-    return payment
+    return payment;
   }
 
   /**
    * Get user payments
    */
   static async getUserPayments(userId: string, page = 1, limit = 10) {
-    const skip = (page - 1) * limit
+    const skip = (page - 1) * limit;
 
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
@@ -360,17 +384,21 @@ export class PaymentsService {
           },
         },
       }),
-    ])
+    ]);
 
-    return { payments, total }
+    return { payments, total };
   }
 
   /**
    * Get all payments (admin only)
    */
-  static async getAllPayments(page = 1, limit = 10, status?: string) {
-    const skip = (page - 1) * limit
-    const where = status ? { status } : {}
+  static async getAllPayments(
+    page = 1,
+    limit = 10,
+    status?: "PENDING" | "SUCCESSFUL" | "FAILED" | "REFUNDED"
+  ) {
+    const skip = (page - 1) * limit;
+    const where = status ? { status: { equals: status } } : undefined;
 
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
@@ -405,9 +433,9 @@ export class PaymentsService {
         },
       }),
       prisma.payment.count({ where }),
-    ])
+    ]);
 
-    return { payments, total }
+    return { payments, total };
   }
 
   /**
@@ -420,7 +448,7 @@ export class PaymentsService {
             userId,
           },
         }
-      : {}
+      : {};
 
     const stats = await prisma.payment.groupBy({
       by: ["status"],
@@ -431,25 +459,25 @@ export class PaymentsService {
       _sum: {
         amount: true,
       },
-    })
+    });
 
-    const totalPayments = stats.reduce((sum, stat) => sum + stat._count.id, 0)
-    const totalAmount = stats.reduce((sum, stat) => sum + Number(stat._sum.amount || 0), 0)
+    const totalPayments = stats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalAmount = stats.reduce(
+      (sum, stat) => sum + Number(stat._sum.amount || 0),
+      0
+    );
 
     return {
       totalPayments,
       totalAmount,
-      byStatus: stats.reduce(
-        (acc, stat) => {
-          acc[stat.status.toLowerCase()] = {
-            count: stat._count.id,
-            amount: Number(stat._sum.amount || 0),
-          }
-          return acc
-        },
-        {} as Record<string, any>,
-      ),
-    }
+      byStatus: stats.reduce((acc, stat) => {
+        acc[stat.status.toLowerCase()] = {
+          count: stat._count.id,
+          amount: Number(stat._sum.amount || 0),
+        };
+        return acc;
+      }, {} as Record<string, any>),
+    };
   }
 
   /**
@@ -466,14 +494,14 @@ export class PaymentsService {
           },
         },
       },
-    })
+    });
 
     if (!payment) {
-      throw new Error("Payment not found")
+      throw new Error("Payment not found");
     }
 
     if (payment.status !== "SUCCESSFUL") {
-      throw new Error("Cannot refund unsuccessful payment")
+      throw new Error("Cannot refund unsuccessful payment");
     }
 
     try {
@@ -489,11 +517,11 @@ export class PaymentsService {
             Authorization: `Bearer ${config.PAYSTACK_SECRET_KEY}`,
             "Content-Type": "application/json",
           },
-        },
-      )
+        }
+      );
 
       if (!response.data.status) {
-        throw new Error(response.data.message || "Refund initiation failed")
+        throw new Error(response.data.message || "Refund initiation failed");
       }
 
       // Update payment status
@@ -510,16 +538,16 @@ export class PaymentsService {
             },
           },
         },
-      })
+      });
 
       return {
         payment: refundedPayment,
         refundData: response.data.data,
         message: "Refund initiated successfully",
-      }
+      };
     } catch (error: any) {
-      console.error("Refund error:", error.response?.data || error.message)
-      throw new Error("Failed to initiate refund")
+      console.error("Refund error:", error.response?.data || error.message);
+      throw new Error("Failed to initiate refund");
     }
   }
 }

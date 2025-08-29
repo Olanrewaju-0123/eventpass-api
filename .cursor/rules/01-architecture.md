@@ -1,0 +1,23 @@
+## Architecture & Domain Rules
+
+- **API versioning**: All routes are mounted under `/api/v1/*` and must remain versioned.
+- **Auth**:
+  - Registration creates a temp user and requires email verification before login.
+  - Only verified users exist in `users`; unverified are stored in `temp_users`.
+  - JWT required for protected routes; include `Authorization: Bearer <token>`.
+- **Events**:
+  - Every created event must expose a bookable entry via both a QR code and a shareable link.
+  - QR/link should resolve to an event details view where booking can happen.
+- **Bookings**:
+  - Users can book multiple tickets for a single event in one booking.
+  - A single QR is generated per booking; scanning shows: quantity and total amount paid.
+  - Booking references and QR codes must be unique.
+- **Payments**:
+  - Payment verification updates booking/payment status and triggers confirmation email (non-blocking in dev).
+  - Webhooks are idempotent; protect with signature verification.
+- **Admin**:
+  - Provide views / endpoints for metrics: bookings, events, users, payments, system stats.
+  - Restrict via role `ADMIN` and middleware.
+- **Caching/RateLimits**:
+  - Redis used for caching, rate limits, and password reset tokens only.
+  - No PII stored long-term in cache.

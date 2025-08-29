@@ -1,10 +1,10 @@
-import jwt from "jsonwebtoken"
-import { prisma } from "../../config/database"
-import { CryptoUtils } from "../../utils/crypto"
-import { emailService } from "../../services/emailService"
-import { CacheService } from "../../services/cache"
-import { config } from "../../config/env"
-import type { JWTPayload } from "../../types"
+import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
+import { prisma } from "../../config/database";
+import { CryptoUtils } from "../../utils/crypto";
+import { emailService } from "../../services/emailService";
+import { CacheService } from "../../services/cache";
+import { config } from "../../config/env";
+import type { JWTPayload } from "../../types";
 
 export class AuthService {
   /**
@@ -15,69 +15,72 @@ export class AuthService {
       userId,
       email,
       role,
-      iat: Date.now(),
-    }
+      // JWT expects seconds since epoch
+      iat: Math.floor(Date.now() / 1000),
+    };
 
-    return jwt.sign(payload, config.JWT_SECRET, {
-      expiresIn: config.JWT_EXPIRES_IN,
-    })
+    const signOptions: SignOptions = {
+      expiresIn: config.JWT_EXPIRES_IN as unknown as any,
+    };
+    return jwt.sign(payload, config.JWT_SECRET as Secret, signOptions);
   }
 
   /**
    * Register new user
    */
   static async register(userData: {
-    email: string
-    password: string
-    firstName: string
-    lastName: string
-    phone?: string
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
   }) {
-    const { email, password, firstName, lastName, phone } = userData
+    const { email, password, firstName, lastName, phone } = userData;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
-    })
+    });
 
     if (existingUser) {
-      throw new Error("User already exists with this email")
+      throw new Error("User already exists with this email");
     }
 
     // Hash password
-    const hashedPassword = await CryptoUtils.hashPassword(password)
+    const hashedPassword = await CryptoUtils.hashPassword(password);
 
-    // Create user
-    const user = await prisma.user.create({
+    // Generate email verification token
+    const verificationToken = CryptoUtils.generateRandomString(32);
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Create temp user (unverified)
+    const tempUser = await (prisma as any).tempUser.create({
       data: {
         email,
         password: hashedPassword,
         firstName,
         lastName,
         phone,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
       },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    })
+    });
 
-    // Generate token
-    const token = this.generateToken(user.id, user.email, user.role)
-
-    // Send welcome email
-    await emailService.sendWelcomeEmail(user.email, user.firstName)
+    // Send email verification (non-blocking)
+    try {
+      await emailService.sendEmailVerification(
+        tempUser.email,
+        verificationToken,
+        tempUser.firstName
+      );
+    } catch (error) {
+      console.error("Email verification failed:", error);
+    }
 
     return {
-      user,
-      token,
-    }
+      message: "Please check your email to verify your account",
+      tempUserId: tempUser.id,
+    };
   }
 
   /**
@@ -87,21 +90,24 @@ export class AuthService {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email },
-    })
+    });
 
     if (!user || !user.isActive) {
-      throw new Error("Invalid credentials")
+      throw new Error("Invalid credentials");
     }
 
     // Verify password
-    const isValidPassword = await CryptoUtils.comparePassword(password, user.password)
+    const isValidPassword = await CryptoUtils.comparePassword(
+      password,
+      user.password
+    );
 
     if (!isValidPassword) {
-      throw new Error("Invalid credentials")
+      throw new Error("Invalid credentials");
     }
 
     // Generate token
-    const token = this.generateToken(user.id, user.email, user.role)
+    const token = this.generateToken(user.id, user.email, user.role);
 
     return {
       user: {
@@ -115,7 +121,7 @@ export class AuthService {
         createdAt: user.createdAt,
       },
       token,
-    }
+    };
   }
 
   /**
@@ -135,13 +141,13 @@ export class AuthService {
         createdAt: true,
         updatedAt: true,
       },
-    })
+    });
 
     if (!user) {
-      throw new Error("User not found")
+      throw new Error("User not found");
     }
 
-    return user
+    return user;
   }
 
   /**
@@ -150,10 +156,10 @@ export class AuthService {
   static async updateProfile(
     userId: string,
     updateData: {
-      firstName?: string
-      lastName?: string
-      phone?: string
-    },
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+    }
   ) {
     const user = await prisma.user.update({
       where: { id: userId },
@@ -169,41 +175,48 @@ export class AuthService {
         createdAt: true,
         updatedAt: true,
       },
-    })
+    });
 
-    return user
+    return user;
   }
 
   /**
    * Change password
    */
-  static async changePassword(userId: string, currentPassword: string, newPassword: string) {
+  static async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ) {
     // Get user with password
     const user = await prisma.user.findUnique({
       where: { id: userId },
-    })
+    });
 
     if (!user) {
-      throw new Error("User not found")
+      throw new Error("User not found");
     }
 
     // Verify current password
-    const isValidPassword = await CryptoUtils.comparePassword(currentPassword, user.password)
+    const isValidPassword = await CryptoUtils.comparePassword(
+      currentPassword,
+      user.password
+    );
 
     if (!isValidPassword) {
-      throw new Error("Current password is incorrect")
+      throw new Error("Current password is incorrect");
     }
 
     // Hash new password
-    const hashedNewPassword = await CryptoUtils.hashPassword(newPassword)
+    const hashedNewPassword = await CryptoUtils.hashPassword(newPassword);
 
     // Update password
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashedNewPassword },
-    })
+    });
 
-    return true
+    return true;
   }
 
   /**
@@ -212,23 +225,29 @@ export class AuthService {
   static async requestPasswordReset(email: string) {
     const user = await prisma.user.findUnique({
       where: { email },
-    })
+    });
 
     if (!user || !user.isActive) {
       // Don't reveal if user exists
-      return true
+      return true;
     }
 
     // Generate reset token
-    const resetToken = CryptoUtils.generateRandomString(32)
+    const resetToken = CryptoUtils.generateRandomString(32);
 
     // Store token in cache (expires in 1 hour)
-    await CacheService.set(`password_reset:${resetToken}`, user.id, { ttl: 3600 })
+    await CacheService.set(`password_reset:${resetToken}`, user.id, {
+      ttl: 3600,
+    });
 
-    // Send reset email
-    await emailService.sendPasswordResetEmail(user.email, user.firstName, resetToken)
+    // Send reset email (correct parameter order: to, resetToken, firstName)
+    await emailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      user.firstName
+    );
 
-    return true
+    return true;
   }
 
   /**
@@ -236,25 +255,76 @@ export class AuthService {
    */
   static async resetPassword(token: string, newPassword: string) {
     // Get user ID from cache
-    const userId = await CacheService.get<string>(`password_reset:${token}`)
+    const userId = await CacheService.get<string>(`password_reset:${token}`);
 
     if (!userId) {
-      throw new Error("Invalid or expired reset token")
+      throw new Error("Invalid or expired reset token");
     }
 
     // Hash new password
-    const hashedPassword = await CryptoUtils.hashPassword(newPassword)
+    const hashedPassword = await CryptoUtils.hashPassword(newPassword);
 
     // Update password
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashedPassword },
-    })
+    });
 
     // Delete reset token
-    await CacheService.delete(`password_reset:${token}`)
+    await CacheService.delete(`password_reset:${token}`);
 
-    return true
+    return true;
+  }
+
+  /**
+   * Verify email
+   */
+  static async verifyEmail(verificationToken: string) {
+    const tempUser = await (prisma as any).tempUser.findFirst({
+      where: {
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!tempUser) {
+      throw new Error("Invalid or expired verification token");
+    }
+
+    // Create verified user
+    const user = await prisma.user.create({
+      data: {
+        email: tempUser.email,
+        password: tempUser.password,
+        firstName: tempUser.firstName,
+        lastName: tempUser.lastName,
+        phone: tempUser.phone,
+        role: "USER",
+      },
+    });
+
+    // Delete temp user
+    await (prisma as any).tempUser.delete({
+      where: { id: tempUser.id },
+    });
+
+    // Generate token for the new verified user
+    const token = this.generateToken(user.id, user.email, user.role);
+
+    return {
+      message: "Email verified successfully",
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive,
+      },
+      token,
+    };
   }
 
   /**
@@ -262,7 +332,7 @@ export class AuthService {
    */
   static async verifyToken(token: string) {
     try {
-      const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload
+      const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload;
 
       // Check if user still exists and is active
       const user = await prisma.user.findUnique({
@@ -275,15 +345,15 @@ export class AuthService {
           role: true,
           isActive: true,
         },
-      })
+      });
 
       if (!user || !user.isActive) {
-        throw new Error("Invalid token")
+        throw new Error("Invalid token");
       }
 
-      return user
+      return user;
     } catch (error) {
-      throw new Error("Invalid token")
+      throw new Error("Invalid token");
     }
   }
 }

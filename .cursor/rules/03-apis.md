@@ -1,0 +1,23 @@
+## API Requirements
+
+- Health: `GET /api/v1/health` → 200 with uptime/env.
+- Auth:
+  - `POST /api/v1/auth/register` → create temp user; returns message and optional next.
+  - `POST /api/v1/auth/verify-email` → token; moves user to `users`; returns JWT.
+  - `POST /api/v1/auth/login` → verified users only; returns JWT.
+  - `GET /api/v1/auth/profile` → requires JWT.
+- Events:
+  - Listing/detail endpoints as implemented.
+  - QR endpoint: `GET /api/v1/qr/event/:eventId` → returns QR code or payload URL.
+  - Promotion link endpoint for sharing.
+- Bookings:
+  - Start booking: includes `eventId`, `quantity` (>=1), price locked at time of booking.
+  - Verify/complete/cancel routes; admin & user scoped listings.
+  - Booking QR: single QR per booking; payload includes bookingReference.
+- Payments:
+  - Initialize → gateway reference.
+  - Verify by reference.
+  - Webhook (secured) → reconcile state.
+- Admin:
+  - Require `ADMIN` middleware.
+  - Provide summary metrics endpoints for bookings/events/users/payments.

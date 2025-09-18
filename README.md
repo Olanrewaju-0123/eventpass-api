@@ -1,34 +1,63 @@
-# EventPass API
+# EventPass - Complete Event Management System
 
-A comprehensive event booking and ticketing system built with Node.js, TypeScript, and PostgreSQL. EventPass allows users to discover events, book tickets, make payments, and receive QR-coded tickets via email.
+A comprehensive full-stack event booking and ticketing system built with modern technologies. EventPass allows users to discover events, book tickets, make payments, and receive QR-coded tickets via email.
 
 ## 🎯 System Overview
 
-EventPass is a full-stack event management platform that handles the complete event booking lifecycle:
+EventPass is a complete event management platform that handles the entire event booking lifecycle:
 
 - **Event Discovery**: Browse and search events by category, date, price, and location
 - **User Management**: Secure authentication with role-based access (User, Organizer, Admin)
 - **Booking System**: Two-phase booking process with ticket reservation and confirmation
-- **Payment Integration**: Seamless Paystack integration for secure payments
+- **Payment Integration**: Seamless Paystack and OPay integration for secure payments
 - **Digital Tickets**: QR-coded tickets delivered via email for event entry
 - **Event Management**: Comprehensive tools for event organizers to manage their events
+- **OTP Verification**: Secure email-based OTP verification for registration and login
+
+## 🏗️ Project Structure
+
+```
+eventpass-api/
+├── backend/                 # Node.js/Express API server
+│   ├── src/                # Source code
+│   ├── prisma/             # Database schema and migrations
+│   ├── config/             # Infrastructure configuration
+│   ├── docker-compose.yaml # Docker services
+│   └── README.md           # Backend documentation
+├── frontend-vite/          # React frontend (Vite)
+│   ├── src/                # Source code
+│   ├── public/             # Static assets
+│   └── README.md           # Frontend documentation
+├── docs/                   # Additional documentation
+│   ├── API_ROUTES_DOCUMENTATION.md
+│   ├── SETUP_GUIDE.md
+│   ├── OTP_SYSTEM_GUIDE.md
+│   ├── API_CONNECTIONS_SUMMARY.md
+│   └── OPAY_INTEGRATION_GUIDE.md
+└── README.md               # This file
+```
 
 ## ✨ Key Features
 
 ### 🔐 Authentication & Authorization
-- JWT-based authentication
+
+- JWT-based authentication with OTP verification
 - Role-based access control (User, Organizer, Admin)
-- Password reset via email
+- Password reset via email with OTP
 - Secure password hashing with bcrypt
+- Email verification for new registrations
 
 ### 🎪 Event Management
+
 - Create, read, update, delete events
 - Event categorization and filtering
 - Capacity management and availability tracking
 - Event promotion QR codes
 - Real-time event statistics
+- Event creation with payment integration
 
 ### 🎫 Booking System
+
 - **Two-Phase Booking Process**:
   1. `startBooking`: Reserve tickets for 15 minutes
   2. `completeBooking`: Confirm booking after successful payment
@@ -38,161 +67,62 @@ EventPass is a full-stack event management platform that handles the complete ev
 - Email confirmations with ticket attachments
 
 ### 💳 Payment Processing
-- Paystack integration for secure payments
+
+- **Paystack Integration**: Card and bank transfer payments
+- **OPay Integration**: Mobile money payments
 - Webhook handling for real-time payment updates
 - Payment verification and tracking
 - Refund processing capabilities
 - Comprehensive payment analytics
 
 ### 📧 Communication System
+
 - Email notifications for all booking stages
 - Professional HTML email templates
 - QR code attachments for tickets
-- Password reset emails
+- Password reset emails with OTP
 - Welcome emails for new users
+- OTP delivery for verification
 
 ### 🚀 Performance & Security
+
 - Redis caching for improved performance
 - Rate limiting to prevent abuse
 - Input validation and sanitization
 - CORS and security headers
 - Comprehensive error handling
+- OTP rate limiting and security
 
-## 🏗️ Technical Stack
+## 🛠️ Tech Stack
 
-### Backend Framework
+### Backend
+
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
-- **TypeScript** - Type safety and better development experience
-
-### Database & ORM
+- **TypeScript** - Type safety
 - **PostgreSQL** - Primary database
-- **Prisma** - Database ORM and query builder
-- **Redis** - Caching and session storage
-
-### Authentication & Security
-- **JWT** - JSON Web Tokens for authentication
-- **bcryptjs** - Password hashing
-- **Helmet** - Security headers
-- **express-rate-limit** - Rate limiting
-- **CORS** - Cross-origin resource sharing
-
-### External Services
-- **Paystack** - Payment processing
+- **Prisma** - Database ORM
+- **Redis** - Caching and OTP storage
+- **JWT** - Authentication
 - **Nodemailer** - Email service
-- **QRCode** - QR code generation
+- **Paystack/OPay** - Payment processing
 
-### Development & Deployment
-- **Docker** - Containerization
-- **Docker Compose** - Multi-service orchestration
-- **Jest** - Testing framework
-- **ESLint** - Code linting
-- **Prisma Studio** - Database management UI
+### Frontend
 
-## 📁 Project Structure
+- **React 18** - UI library
+- **Vite** - Build tool and dev server
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Redux Toolkit** - State management
+- **React Router DOM** - Routing
+- **React Hook Form** - Form handling
+- **Yup** - Validation
+- **Axios** - HTTP client
 
-\`\`\`
-eventpass-api/
-├── src/
-│   ├── config/                 # Configuration files
-│   │   ├── database.ts         # Prisma client setup
-│   │   ├── env.ts             # Environment variables
-│   │   └── redis.ts           # Redis client setup
-│   │
-│   ├── middleware/            # Express middleware
-│   │   ├── auth.ts           # Authentication middleware
-│   │   ├── error.ts          # Error handling middleware
-│   │   ├── rateLimit.ts      # Rate limiting middleware
-│   │   └── webhook.ts        # Webhook verification
-│   │
-│   ├── modules/              # Domain-specific modules
-│   │   ├── auth/            # Authentication module
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── auth.routes.ts
-│   │   │   └── auth.service.ts
-│   │   ├── bookings/        # Booking management
-│   │   │   ├── bookings.controller.ts
-│   │   │   ├── bookings.routes.ts
-│   │   │   └── bookings.service.ts
-│   │   ├── events/          # Event management
-│   │   │   ├── events.controller.ts
-│   │   │   ├── events.routes.ts
-│   │   │   └── events.service.ts
-│   │   └── payments/        # Payment processing
-│   │       ├── payments.controller.ts
-│   │       ├── payments.routes.ts
-│   │       └── payments.service.ts
-│   │
-│   ├── routes/              # API route definitions
-│   │   ├── auth.ts
-│   │   ├── bookings.ts
-│   │   ├── events.ts
-│   │   ├── payments.ts
-│   │   ├── qr.ts
-│   │   └── webhooks.ts
-│   │
-│   ├── services/            # Shared business services
-│   │   ├── cache.ts         # Redis caching service
-│   │   ├── emailService.ts  # Email service with templates
-│   │   ├── qrService.ts     # QR code generation
-│   │   └── paystackService.ts # Paystack API wrapper
-│   │
-│   ├── utils/               # Utility functions
-│   │   ├── crypto.ts        # Cryptographic utilities
-│   │   └── http.ts          # HTTP response helpers
-│   │
-│   ├── types/               # TypeScript type definitions
-│   │   └── index.ts
-│   │
-│   ├── scripts/             # Maintenance scripts
-│   │   ├── cleanup-expired-bookings.ts
-│   │   └── booking-scheduler.ts
-│   │
-│   └── index.ts             # Application entry point
-│
-├── prisma/                  # Database schema and migrations
-│   ├── schema.prisma        # Database schema
-│   └── migrations/          # Database migrations
-│
-├── config/                  # Infrastructure configuration
-│   ├── nginx.conf          # Nginx configuration
-│   ├── prometheus.yaml     # Monitoring configuration
-│   └── redis.conf          # Redis configuration
-│
-├── docker-compose.dev.yaml  # Development environment
-├── docker-compose.yaml      # Production environment
-├── Dockerfile              # Production Docker image
-├── Dockerfile.dev          # Development Docker image
-└── Makefile               # Build and deployment scripts
-\`\`\`
-
-## 🔄 System Flows
-
-### Authentication Flow
-1. User registers with email and password
-2. System sends welcome email
-3. User logs in to receive JWT token
-4. Token used for authenticated requests
-5. Password reset available via email
-
-### Event Booking Flow
-1. **Event Discovery**: User browses available events
-2. **Start Booking**: User initiates booking (tickets reserved for 15 minutes)
-3. **Payment**: User redirected to Paystack for payment
-4. **Webhook Processing**: Paystack notifies system of payment status
-5. **Complete Booking**: System confirms booking and generates QR ticket
-6. **Email Delivery**: Confirmation email sent with QR code attachment
-
-### Event Management Flow
-1. **Organizer Registration**: User registers with organizer role
-2. **Event Creation**: Organizer creates event with details and capacity
-3. **Event Promotion**: System generates QR code for event promotion
-4. **Booking Management**: Real-time tracking of bookings and availability
-5. **Analytics**: Comprehensive statistics and reporting
-
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18+
 - Docker and Docker Compose
 - PostgreSQL (or use Docker)
@@ -201,41 +131,51 @@ eventpass-api/
 ### Installation
 
 1. **Clone the repository**
-   \`\`\`bash
+
+   ```bash
    git clone <repository-url>
    cd eventpass-api
-   \`\`\`
+   ```
 
-2. **Install dependencies**
-   \`\`\`bash
+2. **Backend Setup**
+
+   ```bash
+   cd backend
    npm install
-   \`\`\`
-
-3. **Environment setup**
-   \`\`\`bash
    cp .env.example .env
    # Edit .env with your configuration
-   \`\`\`
+   ```
 
-4. **Start services with Docker**
-   \`\`\`bash
+3. **Frontend Setup**
+
+   ```bash
+   cd ../frontend-vite
+   npm install
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+4. **Start Services**
+
+   ```bash
+   # From backend directory
    docker-compose -f docker-compose.dev.yaml up -d
-   \`\`\`
-
-5. **Run database migrations**
-   \`\`\`bash
    npx prisma migrate dev --name init
    npx prisma generate
-   \`\`\`
-
-6. **Start the application**
-   \`\`\`bash
    npm run dev
-   \`\`\`
+   ```
 
-### Environment Variables
+5. **Start Frontend**
+   ```bash
+   # From frontend-vite directory
+   npm run dev
+   ```
 
-\`\`\`env
+## 🔧 Environment Variables
+
+### Backend (.env)
+
+```env
 # Database
 DATABASE_URL="postgresql://eventuser:eventpass@localhost:5432/eventdb"
 
@@ -250,12 +190,18 @@ JWT_EXPIRES_IN="7d"
 PORT=4000
 API_VERSION="v1"
 NODE_ENV="development"
-FRONTEND_URL="http://localhost:3000"
+FRONTEND_URL="http://localhost:5173"
+BASE_URL="http://localhost:4000"
 
 # Paystack
 PAYSTACK_SECRET_KEY="sk_test_your_secret_key"
 PAYSTACK_PUBLIC_KEY="pk_test_your_public_key"
 PAYSTACK_WEBHOOK_SECRET="your_webhook_secret"
+
+# OPay
+OPAY_SECRET_KEY="your_opay_secret_key"
+OPAY_MERCHANT_ID="your_merchant_id"
+OPAY_PUBLIC_KEY="your_opay_public_key"
 
 # Email Service
 SMTP_HOST="smtp.gmail.com"
@@ -264,228 +210,269 @@ SMTP_USER="your-email@gmail.com"
 SMTP_PASS="your-app-password"
 FROM_EMAIL="your-email@gmail.com"
 FROM_NAME="EventPass"
-\`\`\`
+```
 
-## 📚 API Documentation
+### Frontend (.env)
 
-### Base URL
-\`\`\`
-http://localhost:4000/api/v1
-\`\`\`
+```env
+# API Configuration
+VITE_API_URL=http://localhost:4000/api/v1
 
-### Authentication Endpoints
+# App Configuration
+VITE_APP_NAME=EventPass
+VITE_APP_VERSION=1.0.0
+```
 
-#### Register User
-\`\`\`http
-POST /auth/register
-Content-Type: application/json
+## 📚 Documentation
 
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "firstName": "John",
-  "lastName": "Doe"
-}
-\`\`\`
+- **[Backend Documentation](./backend/README.md)** - Complete API documentation
+- **[Frontend Documentation](./frontend-vite/README.md)** - Frontend setup and features
 
-#### Login User
-\`\`\`http
-POST /auth/login
-Content-Type: application/json
+### 📋 Complete API Routes
 
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-\`\`\`
+**Base URL**: `http://localhost:4000/api/v1`
 
-#### Get Profile
-\`\`\`http
-GET /auth/profile
-Authorization: Bearer <jwt_token>
-\`\`\`
+#### 🔐 Authentication Routes (`/auth`)
 
-### Event Endpoints
+| Method | Endpoint                 | Description                   | Auth Required |
+| ------ | ------------------------ | ----------------------------- | ------------- |
+| `POST` | `/auth/register`         | Register new user (sends OTP) | ❌            |
+| `POST` | `/auth/login`            | Login user (sends OTP)        | ❌            |
+| `POST` | `/auth/complete-login`   | Complete login with OTP       | ❌            |
+| `POST` | `/auth/verify-email-otp` | Verify email with OTP         | ❌            |
+| `POST` | `/auth/resend-email-otp` | Resend email verification OTP | ❌            |
+| `POST` | `/auth/resend-login-otp` | Resend login OTP              | ❌            |
+| `POST` | `/auth/forgot-password`  | Request password reset        | ❌            |
+| `POST` | `/auth/verify-reset-otp` | Verify reset OTP              | ❌            |
+| `POST` | `/auth/reset-password`   | Reset password with OTP       | ❌            |
+| `GET`  | `/auth/profile`          | Get user profile              | ✅            |
+| `PUT`  | `/auth/profile`          | Update user profile           | ✅            |
+| `GET`  | `/auth/users`            | Get all users (Admin)         | ✅            |
 
-#### Get All Events
-\`\`\`http
-GET /events?page=1&limit=10&category=TECHNOLOGY&minPrice=0&maxPrice=100
-\`\`\`
+#### 📅 Events Routes (`/events`)
 
-#### Create Event (Organizer only)
-\`\`\`http
-POST /events
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
+| Method   | Endpoint                     | Description                     | Auth Required  |
+| -------- | ---------------------------- | ------------------------------- | -------------- |
+| `GET`    | `/events`                    | Get all events                  | ❌             |
+| `GET`    | `/events/:id`                | Get event by ID                 | ❌             |
+| `GET`    | `/events/created/:reference` | Get event by creation reference | ❌             |
+| `POST`   | `/events`                    | Create event                    | ✅ (Organizer) |
+| `PUT`    | `/events/:id`                | Update event                    | ✅ (Organizer) |
+| `DELETE` | `/events/:id`                | Delete event                    | ✅ (Organizer) |
 
-{
-  "title": "Tech Conference 2024",
-  "description": "Annual tech conference",
-  "venue": "Convention Center",
-  "startDate": "2024-12-01T09:00:00Z",
-  "endDate": "2024-12-01T17:00:00Z",
-  "price": 50.00,
-  "capacity": 100,
-  "category": "TECHNOLOGY"
-}
-\`\`\`
+#### 🎫 Bookings Routes (`/bookings`)
 
-#### Get Event Details
-\`\`\`http
-GET /events/:eventId
-\`\`\`
+| Method | Endpoint               | Description       | Auth Required |
+| ------ | ---------------------- | ----------------- | ------------- |
+| `GET`  | `/bookings`            | Get user bookings | ✅            |
+| `POST` | `/bookings`            | Create booking    | ✅            |
+| `GET`  | `/bookings/:id`        | Get booking by ID | ✅            |
+| `PUT`  | `/bookings/:id/cancel` | Cancel booking    | ✅            |
 
-### Booking Endpoints
+#### 💳 Payment Routes (`/payments`)
 
-#### Start Booking
-\`\`\`http
-POST /bookings/start
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
+| Method | Endpoint                              | Description                       | Auth Required |
+| ------ | ------------------------------------- | --------------------------------- | ------------- |
+| `GET`  | `/payments/methods`                   | Get payment methods               | ❌            |
+| `POST` | `/payments/initialize`                | Initialize payment                | ✅            |
+| `POST` | `/payments/initialize-event-creation` | Initialize event creation payment | ✅            |
+| `POST` | `/payments/process-mock-payment`      | Process mock payment (dev)        | ✅            |
+| `GET`  | `/payments/verify/:reference`         | Verify payment                    | ❌            |
 
-{
-  "eventId": "event-uuid",
-  "quantity": 2
-}
-\`\`\`
+#### 🏦 OPay Routes (`/opay`)
 
-#### Complete Booking
-\`\`\`http
-POST /bookings/:bookingId/complete
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
+| Method | Endpoint                  | Description              | Auth Required |
+| ------ | ------------------------- | ------------------------ | ------------- |
+| `GET`  | `/opay/methods`           | Get OPay payment methods | ❌            |
+| `POST` | `/opay/create`            | Create OPay payment      | ✅            |
+| `GET`  | `/opay/status/:reference` | Query payment status     | ❌            |
+| `POST` | `/opay/cancel/:reference` | Cancel payment           | ✅            |
 
-{
-  "paymentReference": "paystack-reference"
-}
-\`\`\`
+#### 🔗 Webhook Routes (`/webhooks`)
 
-#### Get User Bookings
-\`\`\`http
-GET /bookings/my/bookings
-Authorization: Bearer <jwt_token>
-\`\`\`
+| Method | Endpoint             | Description      | Auth Required |
+| ------ | -------------------- | ---------------- | ------------- |
+| `POST` | `/webhooks/paystack` | Paystack webhook | ❌            |
+| `POST` | `/webhooks/opay`     | OPay webhook     | ❌            |
 
-### Payment Endpoints
+### 🔐 OTP System Features
 
-#### Initialize Payment
-\`\`\`http
-POST /payments/initialize
-Authorization: Bearer <jwt_token>
-Content-Type: application/json
+#### Registration Flow with OTP
 
-{
-  "bookingId": "booking-uuid",
-  "amount": 100.00
-}
-\`\`\`
+1. User fills registration form
+2. System creates temporary user record
+3. **6-digit OTP sent to email** (expires in 15 minutes)
+4. User enters OTP to verify email
+5. Account is activated and user is logged in
 
-#### Verify Payment
-\`\`\`http
-GET /payments/verify/:paymentReference
-Authorization: Bearer <jwt_token>
-\`\`\`
+#### Login Flow with OTP
+
+1. User enters email and password
+2. System validates credentials
+3. **6-digit OTP sent to email** (expires in 15 minutes)
+4. User enters OTP to complete login
+5. User is authenticated and logged in
+
+#### Password Reset Flow with OTP
+
+1. User requests password reset
+2. **6-digit OTP sent to email** (expires in 15 minutes)
+3. User enters OTP to verify identity
+4. User sets new password
+
+### 💳 Payment Integration
+
+#### Paystack Integration
+
+- Card and bank transfer payments
+- Webhook handling for real-time updates
+- Payment verification and tracking
+- Refund processing capabilities
+
+#### OPay Integration
+
+- QR code payment solution
+- Mobile money payments
+- Real-time payment status polling
+- Secure signature verification
+
+### 🧪 Testing & Development
+
+#### Test Pages
+
+- **API Test**: `http://localhost:5173/test/api` - Comprehensive API testing
+- **OPay Test**: `http://localhost:5173/test/opay` - OPay payment testing
+- **Admin Dashboard**: `http://localhost:5173/admin` - System management
+
+#### Mock Payment System
+
+For development, the system includes a mock payment flow:
+
+1. User initiates payment
+2. Redirects to mock payment success page
+3. Processes payment and creates event
+4. Redirects to event success page with details
+
+## 🔄 System Flows
+
+### Authentication Flow
+
+1. User registers with email and password
+2. System sends OTP verification email
+3. User verifies email with OTP
+4. User logs in to receive JWT token
+5. Token used for authenticated requests
+6. Password reset available via email with OTP
+
+### Event Booking Flow
+
+1. **Event Discovery**: User browses available events
+2. **Start Booking**: User initiates booking (tickets reserved for 15 minutes)
+3. **Payment**: User redirected to Paystack/OPay for payment
+4. **Webhook Processing**: Payment provider notifies system of payment status
+5. **Complete Booking**: System confirms booking and generates QR ticket
+6. **Email Delivery**: Confirmation email sent with QR code attachment
+
+### Event Creation Flow
+
+1. **Organizer Registration**: User registers with organizer role
+2. **Event Creation**: Organizer creates event with details and capacity
+3. **Payment**: Organizer pays event creation fee (₦5,000)
+4. **Event Activation**: Event becomes available for booking
+5. **Event Promotion**: System generates QR code for event promotion
+6. **Analytics**: Real-time tracking of bookings and availability
 
 ## 🧪 Testing
 
-### Run Tests
-\`\`\`bash
-# Run all tests
+### Backend Testing
+
+```bash
+cd backend
 npm test
-
-# Run tests with coverage
 npm run test:coverage
+```
 
-# Run specific test file
-npm test auth.test.ts
-\`\`\`
+### Frontend Testing
 
-### API Testing with Postman
-
-1. **Health Check**
-   \`\`\`
-   GET http://localhost:4000/api/v1/health
-   \`\`\`
-
-2. **Authentication Flow**
-   - Register → Login → Get Profile
-
-3. **Event Management**
-   - Create Event → Get Events → Get Event Details
-
-4. **Booking Flow**
-   - Start Booking → Initialize Payment → Complete Booking
-
-### Database Management
-
-\`\`\`bash
-# Open Prisma Studio
-npx prisma studio
-
-# Reset database
-npx prisma migrate reset
-
-# Generate Prisma client
-npx prisma generate
-\`\`\`
+```bash
+cd frontend-vite
+npm run test
+npm run test:coverage
+```
 
 ## 🐳 Docker Commands
 
-\`\`\`bash
+```bash
 # Start development environment
-make dev
+cd backend
+docker-compose -f docker-compose.dev.yaml up -d
 
 # Start production environment
-make prod
+docker-compose -f docker-compose.yaml up -d
 
 # View logs
 docker-compose -f docker-compose.dev.yaml logs
 
 # Stop services
 docker-compose -f docker-compose.dev.yaml down
-
-# Rebuild containers
-docker-compose -f docker-compose.dev.yaml up --build
-\`\`\`
+```
 
 ## 🔧 Maintenance
 
-### Cleanup Expired Bookings
-\`\`\`bash
-npm run cleanup:bookings
-\`\`\`
+### Database Management
 
-### Database Backup
-\`\`\`bash
-npm run backup:db
-\`\`\`
+```bash
+cd backend
+npx prisma studio          # Open database GUI
+npx prisma migrate reset   # Reset database
+npx prisma generate        # Generate Prisma client
+```
 
-### Monitoring
-- Prometheus metrics available at `/metrics`
-- Health check at `/api/v1/health`
-- Application logs via Docker
+### Cleanup Tasks
+
+```bash
+cd backend
+npm run cleanup:bookings   # Clean expired bookings
+npm run backup:db         # Backup database
+```
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
 4. Add tests for new features
-5. Run the test suite
-6. Submit a pull request
+5. Run the test suite (`npm test`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
 For support and questions:
+
 - Create an issue in the repository
-- Check the documentation
-- Review the API endpoints
+- Check the documentation in the `docs/` folder
+- Review the API endpoints documentation
 - Verify environment configuration
+
+## 🎉 Features in Development
+
+- [ ] Mobile app (React Native)
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] Social media integration
+- [ ] Event recommendation system
+- [ ] Advanced payment methods
+- [ ] Real-time notifications
+- [ ] Event streaming integration
 
 ---
 
-**EventPass API** - Making event booking simple and secure! 🎟️
+**EventPass** - Making event booking simple, secure, and seamless! 🎟️✨
+
+Built with ❤️ using modern web technologies.

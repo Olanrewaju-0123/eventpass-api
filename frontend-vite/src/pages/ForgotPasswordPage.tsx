@@ -30,9 +30,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [resetEmail, setResetEmail] = useState("");
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isLoading, otpSent, pendingEmail } = useAppSelector(
-    (state) => state.auth
-  );
+  const { isLoading } = useAppSelector((state) => state.auth);
 
   const {
     register,

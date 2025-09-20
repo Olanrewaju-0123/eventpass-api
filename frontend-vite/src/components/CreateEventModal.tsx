@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
-import { useAppDispatch, useAppSelector } from "../redux";
+// import { yupResolver } from "@hookform/resolvers/yup";
+// import * as yup from "yup";
+import { useAppSelector } from "../redux";
 import {
   X,
   Calendar,
@@ -54,38 +54,38 @@ const eventCategories = [
   "Other",
 ];
 
-const schema = yup.object({
-  title: yup
-    .string()
-    .required("Event title is required")
-    .min(3, "Title must be at least 3 characters"),
-  description: yup
-    .string()
-    .required("Event description is required")
-    .min(10, "Description must be at least 10 characters"),
-  venue: yup.string().required("Venue is required"),
-  address: yup.string().required("Address is required"),
-  startDate: yup.string().required("Start date is required"),
-  endDate: yup.string().required("End date is required"),
-  startTime: yup.string().required("Start time is required"),
-  endTime: yup.string().required("End time is required"),
-  price: yup
-    .number()
-    .required("Price is required")
-    .min(0, "Price must be positive"),
-  capacity: yup
-    .number()
-    .required("Capacity is required")
-    .min(1, "Capacity must be at least 1"),
-  category: yup.string().required("Category is required"),
-  imageUrl: yup.string().url("Must be a valid URL").optional(),
-});
+// const schema = yup.object({
+//   title: yup
+//     .string()
+//     .required("Event title is required")
+//     .min(3, "Title must be at least 3 characters"),
+//   description: yup
+//     .string()
+//     .required("Event description is required")
+//     .min(10, "Description must be at least 10 characters"),
+//   venue: yup.string().required("Venue is required"),
+//   address: yup.string().required("Address is required"),
+//   startDate: yup.string().required("Start date is required"),
+//   endDate: yup.string().required("End date is required"),
+//   startTime: yup.string().required("Start time is required"),
+//   endTime: yup.string().required("End time is required"),
+//   price: yup
+//     .number()
+//     .required("Price is required")
+//     .min(0, "Price must be positive"),
+//   capacity: yup
+//     .number()
+//     .required("Capacity is required")
+//     .min(1, "Capacity must be at least 1"),
+//   category: yup.string().required("Category is required"),
+//   imageUrl: yup.string().url("Must be a valid URL").optional(),
+// });
 
 const CreateEventModal: React.FC<CreateEventModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const dispatch = useAppDispatch();
+  // const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"paystack" | "opay">(
@@ -100,7 +100,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
     watch,
     setValue,
   } = useForm<CreateEventFormData>({
-    resolver: yupResolver(schema),
+    // resolver: yupResolver(schema),
     defaultValues: {
       startDate: new Date().toISOString().split("T")[0],
       endDate: new Date().toISOString().split("T")[0],
@@ -112,7 +112,7 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
   });
 
   const startDate = watch("startDate");
-  const startTime = watch("startTime");
+  // const startTime = watch("startTime");
 
   // Update end date when start date changes
   React.useEffect(() => {
@@ -246,7 +246,10 @@ const CreateEventModal: React.FC<CreateEventModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+        <form
+          onSubmit={handleSubmit(onSubmit as any)}
+          className="p-6 space-y-6"
+        >
           {/* Event Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

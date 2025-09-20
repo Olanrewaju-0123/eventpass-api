@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { User, Mail, Phone, Calendar, Shield, Eye, EyeOff } from "lucide-react";
+import { User, Mail, Phone, Calendar, Shield } from "lucide-react";
 
 interface UserData {
   id: string;
@@ -14,11 +14,11 @@ interface UserData {
 }
 
 const AdminUsersPage: React.FC = () => {
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [users] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPasswords, setShowPasswords] = useState<{
-    [key: string]: boolean;
-  }>({});
+  // const [showPasswords, setShowPasswords] = useState<{
+  //   [key: string]: boolean;
+  // }>({});
 
   useEffect(() => {
     fetchUsers();
@@ -35,12 +35,12 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
-  const togglePasswordVisibility = (userId: string) => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [userId]: !prev[userId],
-    }));
-  };
+  // const togglePasswordVisibility = (userId: string) => {
+  //   setShowPasswords((prev) => ({
+  //     ...prev,
+  //     [userId]: !prev[userId],
+  //   }));
+  // };
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -276,10 +276,3 @@ const AdminUsersPage: React.FC = () => {
 };
 
 export default AdminUsersPage;
-
-
-
-
-
-
-

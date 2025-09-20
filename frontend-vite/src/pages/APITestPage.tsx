@@ -85,13 +85,13 @@ const APITestPage: React.FC = () => {
       // Booking Tests
       {
         name: "Bookings - Get User Bookings",
-        test: () => bookingService.getUserBookings(),
+        test: () => bookingService.getMyBookings(),
       },
 
       // Payment Tests
       {
-        name: "Payments - Get Payment Methods",
-        test: () => paymentService.getPaymentMethods(),
+        name: "Payments - Get Payment Statistics",
+        test: () => paymentService.getPaymentStatistics(),
       },
 
       // OPay Tests
@@ -297,9 +297,3 @@ const APITestPage: React.FC = () => {
 };
 
 export default APITestPage;
-
-
-
-
-
-

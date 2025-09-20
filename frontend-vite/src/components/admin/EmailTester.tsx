@@ -24,7 +24,7 @@ export const EmailTester: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await emailService.sendTestEmail(formData);
+      await emailService.sendTestEmail(formData);
       toast.success("Test email sent successfully!");
       setLastSent(formData.to);
       setFormData((prev) => ({ ...prev, to: "" }));

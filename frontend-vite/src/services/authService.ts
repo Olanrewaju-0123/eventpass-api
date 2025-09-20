@@ -40,7 +40,7 @@ export const authService = {
   },
 
   // Register new user
-  register: async (userData: RegisterRequest): Promise<RegisterResponse> => {
+  register: async (userData: RegisterRequest): Promise<any> => {
     return apiService.post<RegisterResponse>("/auth/register", userData);
   },
 

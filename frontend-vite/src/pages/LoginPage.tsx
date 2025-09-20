@@ -34,9 +34,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { isLoading, otpSent, pendingEmail, loginStep } = useAppSelector(
-    (state) => state.auth
-  );
+  const { isLoading } = useAppSelector((state) => state.auth);
 
   const from = location.state?.from?.pathname || "/dashboard";
 

@@ -301,7 +301,7 @@ export class PaymentsController {
         // In a real scenario, this would be called by the payment provider's webhook
 
         // Process the payment (create event)
-        await PaymentsService.processPaymentSuccess(reference, "SUCCESSFUL", {
+        await PaymentsService.handleEventCreationPaymentSuccess({
           type: "event_creation",
           eventData: JSON.parse(
             JSON.stringify({

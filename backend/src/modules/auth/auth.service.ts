@@ -524,12 +524,23 @@ export class AuthService {
 
       // Use tempUser data
       user = {
+        id: tempUser.id,
+        email: tempUser.email,
+        role: tempUser.role,
+        password: tempUser.password,
         firstName: tempUser.firstName,
+        lastName: tempUser.lastName,
+        phone: tempUser.phone,
+        createdAt: tempUser.createdAt,
         isActive: true,
+        isEmailVerified: tempUser.isEmailVerified,
+        otpCode: tempUser.otpCode,
+        otpExpires: tempUser.otpExpires,
+        updatedAt: tempUser.updatedAt,
       };
     }
 
-    if (!user.isActive) {
+    if (!user || !user.isActive) {
       // Don't reveal if user exists
       return true;
     }

@@ -305,7 +305,7 @@ export class OpayService {
     try {
       const expectedSignature = this.generateSignature(
         data,
-        config.OPAY_SECRET_KEY
+        config.OPAY_SECRET_KEY || ""
       );
       return crypto.timingSafeEqual(
         Buffer.from(signature, "hex"),

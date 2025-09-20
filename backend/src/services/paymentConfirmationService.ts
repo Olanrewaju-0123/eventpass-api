@@ -1,5 +1,5 @@
-import { EmailService } from "./emailService"
-import { PaymentsService } from "../modules/payments/payments.service"
+import { emailService } from "./emailService";
+import { PaymentsService } from "../modules/payments/payments.service";
 
 export class PaymentConfirmationService {
   /**
@@ -7,30 +7,29 @@ export class PaymentConfirmationService {
    */
   static async sendPaymentConfirmation(paymentReference: string) {
     try {
-      const payment = await PaymentsService.getPaymentByReference(paymentReference)
+      const payment = await PaymentsService.getPaymentByReference(
+        paymentReference
+      );
 
       if (payment.status !== "SUCCESSFUL") {
-        throw new Error("Payment is not successful")
+        throw new Error("Payment is not successful");
       }
 
-      const success = await EmailService.sendPaymentConfirmation(
-        payment.booking.user.email,
-        payment.booking.user.firstName,
-        {
-          amount: Number(payment.amount),
-          reference: payment.paymentReference,
-          method: "Paystack",
-        },
-      )
+      await emailService.sendPaymentConfirmation(payment.booking.user.email, {
+        paymentReference: payment.paymentReference,
+        amount: Number(payment.amount),
+        bookingReference: payment.booking.bookingReference,
+        eventTitle: payment.booking.event.title,
+      });
 
       return {
-        success,
+        success: true,
         payment,
-        message: success ? "Payment confirmation sent successfully" : "Failed to send payment confirmation",
-      }
+        message: "Payment confirmation sent successfully",
+      };
     } catch (error) {
-      console.error("Payment confirmation error:", error)
-      throw error
+      console.error("Payment confirmation error:", error);
+      throw error;
     }
   }
 
@@ -38,7 +37,9 @@ export class PaymentConfirmationService {
    * Get payment confirmation data
    */
   static async getPaymentConfirmationData(paymentReference: string) {
-    const payment = await PaymentsService.getPaymentByReference(paymentReference)
+    const payment = await PaymentsService.getPaymentByReference(
+      paymentReference
+    );
 
     return {
       payment: {
@@ -67,13 +68,13 @@ export class PaymentConfirmationService {
         name: `${payment.booking.user.firstName} ${payment.booking.user.lastName}`,
         email: payment.booking.user.email,
       },
-    }
+    };
   }
 
   /**
    * Resend payment confirmation
    */
   static async resendPaymentConfirmation(paymentReference: string) {
-    return this.sendPaymentConfirmation(paymentReference)
+    return this.sendPaymentConfirmation(paymentReference);
   }
 }

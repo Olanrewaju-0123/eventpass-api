@@ -194,7 +194,7 @@ export class EventsController {
       }
 
       // Generate QR code for the event
-      const { QRService } = await import("../../../services/qrService");
+      const { QRService } = await import("../../services/qrService");
       const qrCode = await QRService.generateEventPromotionQR(event.id);
 
       // Calculate statistics

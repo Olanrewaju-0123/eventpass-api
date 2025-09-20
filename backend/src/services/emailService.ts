@@ -170,6 +170,36 @@ class EmailService {
     }
   }
 
+  async sendEventCreationConfirmation(
+    to: string,
+    eventTitle: string,
+    eventId: string
+  ): Promise<void> {
+    const eventUrl = `${config.FRONTEND_URL}/events/${eventId}`;
+
+    const mailOptions = {
+      from: `${config.FROM_NAME} <${config.FROM_EMAIL}>`,
+      to,
+      subject: "Event Created Successfully - EventPass",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Event Created Successfully!</h2>
+          <p>Congratulations! Your event "${eventTitle}" has been created and is now live on EventPass.</p>
+          <p>You can view and manage your event by clicking the button below:</p>
+          <p><a href="${eventUrl}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Event</a></p>
+          <p>Best regards,<br>The EventPass Team</p>
+        </div>
+      `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error("sendEventCreationConfirmation failed:", error);
+      throw new Error("Failed to send event creation confirmation email");
+    }
+  }
+
   async sendEmailVerification(
     to: string,
     verificationToken: string,

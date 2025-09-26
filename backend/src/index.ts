@@ -16,6 +16,7 @@ import { eventPromotionRoutes } from "./routes/eventPromotion";
 import { paymentConfirmationRoutes } from "./routes/paymentConfirmation";
 import { opayRoutes } from "./modules/payments/opay.routes";
 import { opayWebhookRoutes } from "./routes/opayWebhook";
+import { createAdminRoutes } from "./routes/create-admin";
 
 // Load environment variables
 dotenv.config();
@@ -109,6 +110,7 @@ app.use(`/api/${API_VERSION}/event-promotion`, eventPromotionRoutes);
 app.use(`/api/${API_VERSION}/payment-confirmation`, paymentConfirmationRoutes);
 app.use(`/api/${API_VERSION}/opay`, opayRoutes);
 app.use(`/api/${API_VERSION}/webhooks/opay`, opayWebhookRoutes);
+app.use(`/api/${API_VERSION}/create-admin`, createAdminRoutes);
 
 // 404 handler (use no path to match all in Express 5)
 app.use((req, res) => {

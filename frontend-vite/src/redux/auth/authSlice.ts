@@ -147,13 +147,26 @@ export const forgotPassword = createAsyncThunk(
   "auth/forgotPassword",
   async (email: string, { rejectWithValue }) => {
     try {
+      console.log(
+        "🔧 Redux forgotPassword: Calling authService.forgotPassword for:",
+        email
+      );
       const response = await authService.forgotPassword(email);
+      console.log("🔧 Redux forgotPassword: AuthService response:", response);
+
       if (response.success) {
+        console.log(
+          "🔧 Redux forgotPassword: Success, showing toast and returning result"
+        );
         toast.success("Password reset OTP sent to your email");
         return { email, message: response.message };
       }
+      console.log(
+        "🔧 Redux forgotPassword: Response not successful, rejecting"
+      );
       return rejectWithValue(response.message || "Failed to send reset OTP");
     } catch (error: any) {
+      console.log("🔧 Redux forgotPassword: Error occurred:", error);
       const message =
         error.response?.data?.message || "Failed to send reset OTP";
       toast.error(message);

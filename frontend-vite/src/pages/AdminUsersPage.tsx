@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Mail, Phone, Calendar, Shield } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface UserData {
   id: string;
@@ -14,7 +15,7 @@ interface UserData {
 }
 
 const AdminUsersPage: React.FC = () => {
-  const [users] = useState<UserData[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   // const [showPasswords, setShowPasswords] = useState<{
   //   [key: string]: boolean;
@@ -26,11 +27,28 @@ const AdminUsersPage: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      // This would be an API call to your backend
-      // For now, we'll show the structure
-      setLoading(false);
+      setLoading(true);
+      const response = await fetch("/api/v1/auth/users", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setUsers(data.data);
+      } else {
+        throw new Error(data.message || "Failed to fetch users");
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
+      toast.error("Failed to fetch users");
+    } finally {
       setLoading(false);
     }
   };

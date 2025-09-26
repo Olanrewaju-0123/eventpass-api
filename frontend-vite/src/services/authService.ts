@@ -74,9 +74,18 @@ export const authService = {
   forgotPassword: async (
     email: string
   ): Promise<ApiResponse<{ message: string }>> => {
-    return apiService.post<{ message: string }>("/auth/forgot-password", {
-      email,
-    });
+    console.log(
+      "🔧 AuthService forgotPassword: Making API call to /auth/forgot-password with email:",
+      email
+    );
+    const response = await apiService.post<{ message: string }>(
+      "/auth/forgot-password",
+      {
+        email,
+      }
+    );
+    console.log("🔧 AuthService forgotPassword: API response:", response);
+    return response;
   },
 
   // Verify reset password OTP

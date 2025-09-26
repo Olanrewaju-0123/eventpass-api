@@ -31,8 +31,6 @@ type ResetPasswordFormData = {
 const ResetPasswordPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
@@ -49,16 +47,16 @@ const ResetPasswordPage: React.FC = () => {
 
   const password = watch("password");
 
+  // Get email and OTP from location state
+  const email = location.state?.email;
+  const otp = location.state?.otp;
+
   useEffect(() => {
-    // Get email and OTP from location state
-    if (location.state?.email && location.state?.otp) {
-      setEmail(location.state.email);
-      setOtp(location.state.otp);
-    } else {
+    if (!email || !otp) {
       // If no state, redirect to forgot password
       navigate("/forgot-password");
     }
-  }, [location.state, navigate]);
+  }, [email, otp, navigate]);
 
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {

@@ -9,6 +9,7 @@ import {
   loginUser,
   completeLoginWithOTP,
   resendLoginOTP,
+  resetAuthState,
 } from "../redux";
 import { OTPVerification } from "../components/OTPVerification";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
@@ -29,12 +30,12 @@ type LoginFormData = yup.InferType<typeof schema>;
 
 const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [showOTP, setShowOTP] = useState(false);
-  const [loginEmail, setLoginEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
-  const { isLoading } = useAppSelector((state) => state.auth);
+  const { isLoading, otpSent, pendingEmail } = useAppSelector(
+    (state) => state.auth
+  );
 
   const from = location.state?.from?.pathname || "/dashboard";
 
@@ -55,10 +56,7 @@ const LoginPage: React.FC = () => {
         })
       ).unwrap();
 
-      if (result) {
-        setLoginEmail(data.email);
-        setShowOTP(true);
-      }
+      // Redux will handle state updates
     } catch (error: any) {
       // Error is handled by the Redux slice
     }
@@ -68,7 +66,7 @@ const LoginPage: React.FC = () => {
     try {
       const result = await dispatch(
         completeLoginWithOTP({
-          email: loginEmail,
+          email: pendingEmail!,
           otp,
         })
       ).unwrap();
@@ -83,21 +81,20 @@ const LoginPage: React.FC = () => {
 
   const handleResendOTP = async () => {
     try {
-      await dispatch(resendLoginOTP(loginEmail)).unwrap();
+      await dispatch(resendLoginOTP(pendingEmail!)).unwrap();
     } catch (error: any) {
       throw error; // Let OTPVerification component handle the error
     }
   };
 
   const handleBackToForm = () => {
-    setShowOTP(false);
-    setLoginEmail("");
+    dispatch(resetAuthState());
   };
 
-  if (showOTP) {
+  if (otpSent && pendingEmail) {
     return (
       <OTPVerification
-        email={loginEmail}
+        email={pendingEmail}
         type="login"
         onVerify={handleOTPVerify}
         onResend={handleResendOTP}

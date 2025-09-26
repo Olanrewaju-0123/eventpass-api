@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -8,6 +8,7 @@ import {
   useAppDispatch,
   forgotPassword,
   verifyResetOTP,
+  resetAuthState,
 } from "../redux";
 import { OTPVerification } from "../components/OTPVerification";
 import { ArrowLeft, Mail } from "lucide-react";
@@ -26,11 +27,34 @@ type ForgotPasswordFormData = {
 };
 
 const ForgotPasswordPage: React.FC = () => {
-  const [showOtpVerification, setShowOtpVerification] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isLoading } = useAppSelector((state) => state.auth);
+  const { isLoading, otpSent, pendingEmail } = useAppSelector(
+    (state) => state.auth
+  );
+
+  // Debug state changes
+  console.log(
+    "🔧 ForgotPasswordPage render - otpSent:",
+    otpSent,
+    "pendingEmail:",
+    pendingEmail
+  );
+
+  // Track state changes
+  useEffect(() => {
+    console.log(
+      "🔧 ForgotPasswordPage useEffect - otpSent changed to:",
+      otpSent
+    );
+  }, [otpSent]);
+
+  useEffect(() => {
+    console.log(
+      "🔧 ForgotPasswordPage useEffect - pendingEmail changed to:",
+      pendingEmail
+    );
+  }, [pendingEmail]);
 
   const {
     register,
@@ -42,12 +66,16 @@ const ForgotPasswordPage: React.FC = () => {
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
+      console.log(
+        "🔧 ForgotPassword: Starting forgot password request for:",
+        data.email
+      );
       const result = await dispatch(forgotPassword(data.email)).unwrap();
-      if (result) {
-        setResetEmail(data.email);
-        setShowOtpVerification(true);
-      }
+      console.log("🔧 ForgotPassword: Result from Redux action:", result);
+
+      console.log("🔧 ForgotPassword: Redux will handle state updates");
     } catch (error: any) {
+      console.log("🔧 ForgotPassword: Error occurred:", error);
       // Error is handled by the Redux slice
     }
   };
@@ -56,7 +84,7 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       const result = await dispatch(
         verifyResetOTP({
-          email: resetEmail,
+          email: pendingEmail!,
           otp,
         })
       ).unwrap();
@@ -64,7 +92,7 @@ const ForgotPasswordPage: React.FC = () => {
       if (result) {
         // Navigate to reset password page with email
         navigate("/reset-password", {
-          state: { email: resetEmail, otp },
+          state: { email: pendingEmail, otp },
         });
       }
     } catch (error: any) {
@@ -74,18 +102,21 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleResendOTP = async () => {
     try {
-      await dispatch(forgotPassword(resetEmail)).unwrap();
+      await dispatch(forgotPassword(pendingEmail!)).unwrap();
     } catch (error: any) {
       throw error; // Let OTPVerification component handle the error
     }
   };
 
   const handleBack = () => {
-    setShowOtpVerification(false);
-    setResetEmail("");
+    // Reset Redux state
+    dispatch(resetAuthState());
   };
 
-  if (showOtpVerification) {
+  console.log("🔧 ForgotPasswordPage: About to check otpSent:", otpSent);
+
+  if (otpSent && pendingEmail) {
+    console.log("🔧 ForgotPasswordPage: Rendering OTP verification component");
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 flex items-center justify-center p-4">
         <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -113,7 +144,7 @@ const ForgotPasswordPage: React.FC = () => {
           {/* Right Section - OTP Verification */}
           <div className="flex items-center justify-center">
             <OTPVerification
-              email={resetEmail}
+              email={pendingEmail!}
               type="email_verification"
               onVerify={handleVerifyOTP}
               onResend={handleResendOTP}
@@ -128,6 +159,8 @@ const ForgotPasswordPage: React.FC = () => {
       </div>
     );
   }
+
+  console.log("🔧 ForgotPasswordPage: Rendering forgot password form");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50 flex items-center justify-center p-4">

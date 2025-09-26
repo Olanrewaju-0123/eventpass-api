@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CacheManagement } from "../components/admin/CacheManagement";
 import { EmailTester } from "../components/admin/EmailTester";
 import {
@@ -12,6 +12,85 @@ import {
 
 const AdminDashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalEvents: 0,
+    totalBookings: 0,
+    totalRevenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      // Fetch users
+      const usersResponse = await fetch("/api/v1/auth/users", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        if (usersData.success) {
+          setStats((prev) => ({ ...prev, totalUsers: usersData.data.length }));
+        }
+      }
+
+      // Fetch events (if endpoint exists)
+      try {
+        const eventsResponse = await fetch("/api/v1/events", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          if (eventsData.success) {
+            setStats((prev) => ({
+              ...prev,
+              totalEvents: eventsData.data.length,
+            }));
+          }
+        }
+      } catch (error) {
+        console.log("Events endpoint not available");
+      }
+
+      // Fetch bookings (if endpoint exists)
+      try {
+        const bookingsResponse = await fetch("/api/v1/bookings/admin/all", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (bookingsResponse.ok) {
+          const bookingsData = await bookingsResponse.json();
+          if (bookingsData.success) {
+            setStats((prev) => ({
+              ...prev,
+              totalBookings: bookingsData.data.length,
+            }));
+          }
+        }
+      } catch (error) {
+        console.log("Bookings endpoint not available");
+      }
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
@@ -49,7 +128,7 @@ const AdminDashboardPage: React.FC = () => {
         );
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-blue-600 mr-3" />
@@ -57,7 +136,9 @@ const AdminDashboardPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Total Users
                   </h3>
-                  <p className="text-2xl font-bold text-blue-600">-</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {loading ? "..." : stats.totalUsers}
+                  </p>
                 </div>
               </div>
             </div>
@@ -69,7 +150,9 @@ const AdminDashboardPage: React.FC = () => {
                   <h3 className="text-lg font-semibold text-gray-900">
                     Total Events
                   </h3>
-                  <p className="text-2xl font-bold text-green-600">-</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {loading ? "..." : stats.totalEvents}
+                  </p>
                 </div>
               </div>
             </div>
@@ -77,6 +160,20 @@ const AdminDashboardPage: React.FC = () => {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
                 <Database className="h-8 w-8 text-purple-600 mr-3" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Total Bookings
+                  </h3>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {loading ? "..." : stats.totalBookings}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center">
+                <Shield className="h-8 w-8 text-orange-600 mr-3" />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
                     Cache Status

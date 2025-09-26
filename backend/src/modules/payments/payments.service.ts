@@ -476,7 +476,7 @@ export class PaymentsService {
     return {
       totalPayments,
       totalAmount,
-      byStatus: stats.reduce((acc, stat) => {
+      byStatus: stats.reduce((acc: any, stat: any) => {
         acc[stat.status.toLowerCase()] = {
           count: stat._count.id,
           amount: Number(stat._sum.amount || 0),

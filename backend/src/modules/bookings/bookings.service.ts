@@ -653,13 +653,13 @@ export class BookingsService {
       },
     });
 
-    const totalBookings = stats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalBookings = stats.reduce((sum: number, stat: any) => sum + stat._count.id, 0);
     const totalTickets = stats.reduce(
-      (sum, stat) => sum + (stat._sum.quantity || 0),
+      (sum: number, stat: any) => sum + (stat._sum.quantity || 0),
       0
     );
     const totalAmount = stats.reduce(
-      (sum, stat) => sum + Number(stat._sum.totalAmount || 0),
+      (sum: number, stat: any) => sum + Number(stat._sum.totalAmount || 0),
       0
     );
 
@@ -667,7 +667,7 @@ export class BookingsService {
       totalBookings,
       totalTickets,
       totalAmount,
-      byStatus: stats.reduce((acc, stat) => {
+      byStatus: stats.reduce((acc: any, stat: any) => {
         acc[stat.status.toLowerCase()] = {
           count: stat._count.id,
           tickets: stat._sum.quantity || 0,

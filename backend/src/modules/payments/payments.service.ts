@@ -467,9 +467,9 @@ export class PaymentsService {
       },
     });
 
-    const totalPayments = stats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalPayments = stats.reduce((sum: number, stat: any) => sum + stat._count.id, 0);
     const totalAmount = stats.reduce(
-      (sum, stat) => sum + Number(stat._sum.amount || 0),
+      (sum: number, stat: any) => sum + Number(stat._sum.amount || 0),
       0
     );
 

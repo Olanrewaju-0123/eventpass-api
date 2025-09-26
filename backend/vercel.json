@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.js",
+      "src": "src/index.ts",
       "use": "@vercel/node",
       "config": {
         "includeFiles": ["prisma/**", "package.json", "package-lock.json"],
@@ -13,9 +13,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "index.js"
+      "dest": "src/index.ts"
     }
-  ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  ]
 }

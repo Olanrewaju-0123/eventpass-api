@@ -123,16 +123,20 @@ app.use((req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 EventPass API running on port ${PORT}`);
-  console.log(
-    `📚 API Documentation: http://localhost:${PORT}/api/${API_VERSION}`
-  );
-  console.log(
-    `🏥 Health Check: http://localhost:${PORT}/api/${API_VERSION}/health`
-  );
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-});
-
+// For Vercel serverless functions
 export default app;
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 EventPass API running on port ${PORT}`);
+    console.log(
+      `📚 API Documentation: http://localhost:${PORT}/api/${API_VERSION}`
+    );
+    console.log(
+      `🏥 Health Check: http://localhost:${PORT}/api/${API_VERSION}/health`
+    );
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  });
+}

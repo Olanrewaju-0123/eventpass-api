@@ -54,7 +54,7 @@ export class BookingsService {
     const bookingReference = CryptoUtils.generateBookingReference();
 
     // Start database transaction
-    const booking = await prisma.$transaction(async (tx) => {
+    const booking = await prisma.$transaction(async (tx: any) => {
       // Create pending booking
       const newBooking = await tx.booking.create({
         data: {

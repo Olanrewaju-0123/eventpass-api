@@ -492,19 +492,19 @@ export class EventsService {
       },
     });
 
-    const totalBookings = stats.reduce((sum, stat) => sum + stat._count.id, 0);
+    const totalBookings = stats.reduce((sum: number, stat: any) => sum + stat._count.id, 0);
     const totalTicketsSold = stats.reduce(
-      (sum, stat) => sum + (stat._sum.quantity || 0),
+      (sum: number, stat: any) => sum + (stat._sum.quantity || 0),
       0
     );
     const totalRevenue = stats.reduce(
-      (sum, stat) => sum + Number(stat._sum.totalAmount || 0),
+      (sum: number, stat: any) => sum + Number(stat._sum.totalAmount || 0),
       0
     );
 
-    const confirmedBookings = stats.find((s) => s.status === "CONFIRMED");
-    const pendingBookings = stats.find((s) => s.status === "PENDING");
-    const cancelledBookings = stats.find((s) => s.status === "CANCELLED");
+    const confirmedBookings = stats.find((s: any) => s.status === "CONFIRMED");
+    const pendingBookings = stats.find((s: any) => s.status === "PENDING");
+    const cancelledBookings = stats.find((s: any) => s.status === "CANCELLED");
 
     return {
       event: {

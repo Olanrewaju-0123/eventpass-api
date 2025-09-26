@@ -49,7 +49,7 @@ const LoginPage: React.FC = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const result = await dispatch(
+      await dispatch(
         loginUser({
           email: data.email,
           password: data.password,

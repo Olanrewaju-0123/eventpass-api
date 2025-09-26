@@ -10,6 +10,11 @@ export const rateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Use X-Forwarded-For header for Vercel proxy
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  trustProxy: true,
 })
 
 export const authRateLimiter = rateLimit({
@@ -21,6 +26,10 @@ export const authRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  trustProxy: true,
 })
 
 export const passwordResetRateLimiter = rateLimit({
@@ -32,4 +41,8 @@ export const passwordResetRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  trustProxy: true,
 })

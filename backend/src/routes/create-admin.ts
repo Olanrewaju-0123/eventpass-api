@@ -25,7 +25,17 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return HttpResponse.validationError(res, "Validation failed", errors.array());
+      const errorMap: Record<string, string[]> = {};
+      errors.array().forEach((error) => {
+        if (error.type === 'field') {
+          const field = error.path;
+          if (!errorMap[field]) {
+            errorMap[field] = [];
+          }
+          errorMap[field].push(error.msg);
+        }
+      });
+      return HttpResponse.validationError(res, "Validation failed", errorMap);
     }
 
     const { email, password, firstName, lastName } = req.body;

@@ -63,7 +63,7 @@ app.use(
       "https://eventpass-frontends.vercel.app",
       "https://eventpass-frontends.vercel.app/",
       "https://eventpass-frontends-*.vercel.app",
-      "https://*.vercel.app"
+      "https://*.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -137,7 +137,7 @@ app.use(errorHandler);
 export default app;
 
 // For local development
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`🚀 EventPass API running on port ${PORT}`);
